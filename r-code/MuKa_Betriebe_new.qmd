@@ -1,0 +1,221 @@
+---
+author: "Dr. Guy Schnidrig"
+date: "2025-09-19"
+
+always_allow_html: yes
+format:
+  html:
+    toc: true
+    toc-location: left 
+    code-fold: true
+
+output:
+  html_document:
+    df_print: paged
+
+editor: source
+---
+
+```{r setup 1, include=FALSE, warning=FALSE, echo=FALSE}
+# Setup
+# Install and load libraries 
+rm(list=ls())
+gc()
+
+options(dplyr.summarise.inform = FALSE,
+        scipen = 999)
+
+set.seed(42) 
+
+# Load libraries
+library(tidyverse) 
+library(data.table) 
+
+# Set working directory 
+setwd("~/ISABV-research-projects/MuKa")
+
+# Selected farms
+muka_farms <- fread("~/ISABV-research-projects/MuKa/data/raw/tvd_muka.csv")
+filtered_tvd_data <- readxl::read_excel("~/ISABV-research-projects/MuKa/data/raw/TVD-Kriterien-MUKA-Projekt-Daten2024-2025-09-19.xlsx")
+
+```
+
+```{r, echo=FALSE}
+# Create matrix
+tvd_matrix <- filtered_tvd_data %>%
+  select(
+    tvd,
+    `1_femaleDairyCattle_V2`,
+    `2_femaleCattle`,
+    `3_calf85Arrivals`,
+    #`4_maleCalf85Arrivals`
+    `5_calf51nonSlaughterLeavings`
+    #,
+    #`6_female731Slaughterings`,
+    #`7_young51to730Slaughterings`
+  )
+
+# Define the profile look-up table
+group_ref <- data.frame(
+  Variable = c(
+    "1_femaleDairyCattle_V2",
+    "2_femaleCattle",
+    "3_calf85Arrivals",
+    #"4_maleCalf85Arrival`",
+    "5_calf51nonSlaughterLeavings"
+    #,
+    #"6_female731Slaughterings",
+    #"7_young51to730Slaughterings"
+  ),
+  Muku = c(0, 0, 0, 0),
+  Muku_Amme = c(0, 0, 1, 0),
+  Milchvieh = c(1, 0, 0,  1),
+  BKMmZ = c(1, 0, 1, 0),
+  BKMoZ = c(1, 0, 0, 0),
+  IKM = c(0, 1, 1, 0)
+)
+
+# Old matrix
+# Muku = c(0,0,0,0,0,0,1),
+# Muku_Amme = c(0,0,1,1,0,0,1),
+# Milchvieh = c(1,0,0,0,1,1,0),
+# BKMmZ = c(1,0,1,1,0,0,1),
+# BKMoZ = c(1,0,0,0,0,0,1), 
+# IKM = c(0,1,1,1,0,0,1)
+
+# Assign groups
+tvd_grouped <- tvd_matrix %>%
+  mutate(
+    group = case_when(
+      `1_femaleDairyCattle_V2` == 0 &
+        `2_femaleCattle` == 0 &
+        `3_calf85Arrivals` == 0 &
+        `5_calf51nonSlaughterLeavings` == 0 
+      # &  `6_female731Slaughterings` == 0 
+      
+      ~ "Muku",
+      
+      `1_femaleDairyCattle_V2` == 0 &
+        `2_femaleCattle` == 0 &
+        `3_calf85Arrivals` == 1 &
+        `5_calf51nonSlaughterLeavings` == 0
+        # &  `6_female731Slaughterings` == 0 
+      ~ "Muku_Amme",
+      
+      `1_femaleDairyCattle_V2` == 1 &
+        `2_femaleCattle` == 0 &
+        `3_calf85Arrivals` == 0 &
+        `5_calf51nonSlaughterLeavings` == 1
+      # &  `6_female731Slaughterings` == 0 
+        ~ "Milchvieh",
+      
+      `1_femaleDairyCattle_V2` == 1 &
+        `2_femaleCattle` == 0 &
+        `3_calf85Arrivals` == 1 &
+        `5_calf51nonSlaughterLeavings` == 0 
+      # &  `6_female731Slaughterings` == 0 
+      ~ "BKMmZ",
+      
+      `1_femaleDairyCattle_V2` == 1 &
+        `2_femaleCattle` == 0 &
+        `3_calf85Arrivals` == 0 &
+        `5_calf51nonSlaughterLeavings` == 0
+      # &  `6_female731Slaughterings` == 0 
+      ~ "BKMoZ",
+      
+      
+      `1_femaleDairyCattle_V2` == 0 &
+        `2_femaleCattle` == 1 &
+        `3_calf85Arrivals` == 1  &
+        `5_calf51nonSlaughterLeavings` == 0 
+      # &  `6_female731Slaughterings` == 0 
+      ~ "IKM",
+      
+      TRUE ~ NA_character_
+    )
+  )
+
+
+joined_df <- left_join(
+  filtered_tvd_data,
+  tvd_grouped,
+  by = join_by(
+    tvd,
+    `1_femaleDairyCattle_V2`,
+    `2_femaleCattle`,
+    `3_calf85Arrivals`,
+    #`4_maleCalf85Arrival`,
+    `5_calf51nonSlaughterLeavings`
+    #,
+    #`6_female731Slaughterings`,
+    #`7_young51to730Slaughterings`
+  )
+)
+```
+
+
+```{r, echo=FALSE}
+# Internal Use
+fwrite(joined_df, "~/ISABV-research-projects/MuKa/data/output/BetriebsFilterMuKaBLV.csv", bom = T)
+
+# Simply anonymize the TVD; there is no need to hash it.
+joined_df["tvd"] = seq_len(nrow(joined_df))
+fwrite(joined_df, "~/ISABV-research-projects/MuKa/data/output/BetriebsFilterMuKaJule.csv", bom = T)
+
+```
+
+
+```{r, echo=FALSE}
+# How many of each Group are there
+cat("Total farms: ")
+length(joined_df$tvd)
+cat("NA: ")
+sum(is.na(joined_df$group))
+table(joined_df$group)
+```
+
+
+```{r, echo=FALSE}
+# Most common combinations
+joined_df %>%
+  group_by(across(matches("^\\d"))) %>%   # only columns starting with a digit
+  summarise(count = n(), .groups = "drop") %>%
+  arrange(desc(count))
+
+```
+
+
+
+
+
+```{r, echo=FALSE}
+# Summary Statistics
+summary <- joined_df %>%
+  group_by(group) %>%
+  summarise(
+    across(
+      c(
+        n_animals_total,
+        n_females_age3_dairy,
+        n_days_female_age3_dairy,
+        prop_days_female_age3_dairy,
+        n_females_age3_total,
+        n_total_entries_younger85,
+        n_total_leavings_younger51,
+        n_females_younger731,
+        prop_females_slaughterings_younger731,
+        n_animals_from51_to730
+      ),
+      list(
+        min = ~min(.x, na.rm = TRUE),
+        max = ~max(.x, na.rm = TRUE),
+        mean = ~mean(.x, na.rm = TRUE),
+        median = ~median(.x, na.rm = TRUE)
+      ),
+      .names = "{.col}_{.fn}"
+    )
+  )
+summary
+```
+
+
