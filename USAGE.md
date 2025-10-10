@@ -9,6 +9,52 @@ cd /home/mischa/git/i/muka
 uv sync  # Installs all dependencies automatically
 ```
 
+### Interactive MCP Client - NEW! ⭐
+
+The fastest way to explore and analyze your farm data is with our interactive MCP client:
+
+```bash
+# Start the interactive client
+uv run python interactive_mcp_client.py
+
+# View comprehensive examples
+muka> examples
+
+# Check data status
+muka> info
+
+# Query farms
+muka> query group=Muku min_animals=50
+
+# Ask natural language questions
+muka> question How many dairy farms have more than 100 animals?
+
+# Get statistics
+muka> stats group=Milchvieh
+
+# Custom calculations
+muka> metric expression=n_animals_total.mean()
+
+# Export results
+muka> export my_analysis.xlsx
+```
+
+**Key Features:**
+
+- 🗣️ **Natural language queries** - Ask questions in plain English
+- 🔍 **Flexible filtering** - Query farms by group, size, year, TVD
+- 📊 **Live statistics** - Calculate stats on-the-fly for any group
+- 🧮 **Custom metrics** - Use pandas expressions for custom calculations
+- 💡 **Auto insights** - Discover patterns and outliers automatically
+- 📁 **Easy export** - Save results to Excel with one command
+- ⌨️ **Tab completion** - Command and parameter auto-completion
+- 📚 **Built-in help** - Type `examples` to see all available tools
+
+**See Also:**
+
+- **[MCP_TOOLS_REFERENCE.md](MCP_TOOLS_REFERENCE.md)** - Complete reference with all examples
+- **[MCP_QUICKSTART.md](MCP_QUICKSTART.md)** - 5-minute MCP setup guide
+
 ### Running the Analysis - Modern CLI
 
 The tool now features a modern CLI with Rich console output and Typer interface. Analysis results are beautifully displayed in the terminal, and Excel export is optional.

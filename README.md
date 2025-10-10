@@ -74,14 +74,41 @@ All commands support theme switching to ensure comfortable viewing in any enviro
 **NEW!** Interact with your farm data using natural language through our Model Context Protocol (MCP) server:
 
 ```bash
-# Quick test
+# Quick test with interactive client
+uv run python interactive_mcp_client.py
+
+# See ALL available commands and examples
+# Type 'examples' in the interactive client for comprehensive guide
+
+# Test with standalone script
 uv run python test_mcp_server.py
 
 # Use with Claude Desktop or any MCP client
 # See MCP_QUICKSTART.md for setup
 ```
 
+### Interactive Client Quick Start
+
+The interactive MCP client provides a command-line interface to explore your farm data:
+
+```bash
+uv run python interactive_mcp_client.py
+```
+
+**Essential Commands:**
+
+- `examples` - **Show comprehensive usage examples for ALL tools** ⭐
+- `info` - Check data status
+- `query group=Muku` - Filter farms by group
+- `stats group=Milchvieh` - Get statistics for a group
+- `question How many dairy farms?` - Ask in natural language
+- `insights focus=outliers` - Find patterns
+- `metric expression=n_animals_total.mean()` - Custom calculations
+- `help` - Show command list
+- `quit` - Exit
+
 **Natural Language Examples:**
+
 - "How many dairy farms have more than 100 animals?"
 - "What's the average animal count for each group?"
 - "Show me statistics for Muku farms"
@@ -90,6 +117,7 @@ uv run python test_mcp_server.py
 - "Export the analysis to Excel"
 
 **Documentation:**
+
 - **[MCP_QUICKSTART.md](MCP_QUICKSTART.md)** - 5-minute setup guide
 - **[MCP_SERVER_GUIDE.md](MCP_SERVER_GUIDE.md)** - Complete reference
 
@@ -160,6 +188,7 @@ muka_analysis/
 - **[VALIDATION.md](VALIDATION.md)** - Data validation documentation
 
 See also:
+
 - `demo_configuration.py` - Interactive configuration demo
 - `demo_output_interface.py` - Output interface demo
 - `muka_config.example.toml` - Example configuration file
