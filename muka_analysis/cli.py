@@ -171,8 +171,7 @@ def analyze(
             # Classify farms
             task2 = progress.add_task("Classifying farms...", total=None)
             classifier = FarmClassifier()
-            for farm in farms:
-                classifier.classify_farm(farm)
+            farms = classifier.classify_farms(farms)
             progress.update(task2, description="✓ Farms classified")
 
             # Analyze results
