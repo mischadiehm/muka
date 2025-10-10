@@ -31,6 +31,7 @@ summary_output_file = "analysis_summary.xlsx"
 [classification]
 # Farm classification parameters
 presence_threshold = 0.0        # Threshold for binary classification (>0 = present)
+use_six_indicators = true       # Use all 6 indicators (true) or only 4 indicators (false)
 require_all_fields = true       # Require all fields in input data
 allow_missing_values = false    # Allow missing values in non-critical fields
 show_unclassified_warnings = false  # Show warnings for unclassified farms (default: false)

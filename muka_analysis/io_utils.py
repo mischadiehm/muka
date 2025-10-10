@@ -126,6 +126,8 @@ class IOUtils:
                     indicator_female_cattle=int(row["2_femaleCattle"]),
                     indicator_calf_arrivals=int(row["3_calf85Arrivals"]),
                     indicator_calf_leavings=int(row["5_calf51nonSlaughterLeavings"]),
+                    indicator_female_slaughterings=int(row["6_female731Slaughterings"]),
+                    indicator_young_slaughterings=int(row["7_young51to730Slaughterings"]),
                 )
                 farms.append(farm)
 
@@ -178,6 +180,8 @@ class IOUtils:
                     "2_femaleCattle": farm.indicator_female_cattle,
                     "3_calf85Arrivals": farm.indicator_calf_arrivals,
                     "5_calf51nonSlaughterLeavings": farm.indicator_calf_leavings,
+                    "6_female731Slaughterings": farm.indicator_female_slaughterings,
+                    "7_young51to730Slaughterings": farm.indicator_young_slaughterings,
                     "group": (
                         farm.group.value
                         if farm.group and hasattr(farm.group, "value")

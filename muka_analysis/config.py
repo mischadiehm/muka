@@ -84,6 +84,15 @@ class ClassificationConfig(BaseModel):
         description="Threshold for determining presence in binary classification",
     )
 
+    # Classification criteria
+    use_six_indicators: bool = Field(
+        default=True,
+        description=(
+            "Use all 6 indicators for classification (includes female_slaughterings "
+            "and young_slaughterings). If False, uses only the original 4 indicators."
+        ),
+    )
+
     # Validation settings
     require_all_fields: bool = Field(
         default=True,

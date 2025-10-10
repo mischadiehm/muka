@@ -41,6 +41,8 @@ class FarmAnalyzer:
         "indicator_female_cattle",
         "indicator_calf_arrivals",
         "indicator_calf_leavings",
+        "indicator_female_slaughterings",
+        "indicator_young_slaughterings",
     ]
 
     def __init__(self, farms: List[FarmData]) -> None:
@@ -64,27 +66,19 @@ class FarmAnalyzer:
         """
         Create a descriptive name from classification indicator pattern.
 
+        This method is kept for validation purposes but should not be used
+        for primary analysis. Use the 'group' field instead.
+
         Args:
-            indicator_combo: Tuple of (female_dairy, female_cattle, calf_arrivals, calf_leavings)
+            indicator_combo: Tuple of 6 indicators (female_dairy, female_cattle,
+                           calf_arrivals, calf_leavings, female_slaughterings, young_slaughterings)
 
         Returns:
-            String representation like "0-0-1-0" or with assigned group name if available
+            String representation like "Pattern_0-0-0-0-0-1"
         """
-        # Convert tuple to string pattern
+        # Convert tuple to string pattern (all 6 indicators)
         pattern = "-".join(str(int(v)) for v in indicator_combo)
-
-        # Map to group names based on classification logic
-        # These match the R code classification rules
-        pattern_map = {
-            "0-0-0-0": "Muku",
-            "0-0-1-0": "Muku_Amme",
-            "1-0-0-1": "Milchvieh",
-            "1-0-1-0": "BKMmZ",
-            "1-0-0-0": "BKMoZ",
-            "0-1-1-0": "IKM",
-        }
-
-        return pattern_map.get(pattern, f"Pattern_{pattern}")
+        return f"Pattern_{pattern}"
 
     def _create_dataframe(self) -> pd.DataFrame:
         """
@@ -104,6 +98,8 @@ class FarmAnalyzer:
                     "indicator_female_cattle": farm.indicator_female_cattle,
                     "indicator_calf_arrivals": farm.indicator_calf_arrivals,
                     "indicator_calf_leavings": farm.indicator_calf_leavings,
+                    "indicator_female_slaughterings": farm.indicator_female_slaughterings,
+                    "indicator_young_slaughterings": farm.indicator_young_slaughterings,
                     # Validation group (NOT used for analysis grouping)
                     "group": (
                         farm.group.value
@@ -153,43 +149,45 @@ class FarmAnalyzer:
 
     def calculate_group_statistics(self, group: Optional[FarmGroup] = None) -> pd.DataFrame:
         """
-        Calculate descriptive statistics for numeric fields grouped by classification indicators.
+        Calculate descriptive statistics for numeric fields grouped by assigned farm group.
 
-        This follows the R code logic: group by the combination of binary classification
-        indicators, NOT by the 'group' column (which is only used for validation).
+        This uses the 'group' column which contains the classification result
+        (Muku, Muku_Amme, Milchvieh, BKMmZ, BKMoZ, IKM).
 
         Args:
             group: Specific group to analyze, or None for all groups
 
         Returns:
-            DataFrame with statistics (min, max, mean, median) for each classification pattern
+            DataFrame with statistics (min, max, mean, median) for each farm group
 
         Note:
             Statistics are calculated for all numeric fields defined in NUMERIC_FIELDS.
-            Grouping is based on CLASSIFICATION_FIELDS (indicator columns).
+            Only farms with an assigned group (not None/Unclassified) are included.
         """
+        # Filter out unclassified farms (group is None)
+        classified_df = self.df[self.df["group"].notna()].copy()
+
+        if classified_df.empty:
+            logger.warning("No classified farms found")
+            return pd.DataFrame()
+
         if group is not None:
-            # For specific group, filter by classification indicators
-            group_df = self.df[self.df["group"] == group.value]
+            # For specific group, filter by group value
+            group_df = classified_df[classified_df["group"] == group.value]
             if group_df.empty:
                 logger.warning(f"No farms found in group {group.value}")
                 return pd.DataFrame()
             dfs_to_analyze = {group.value: group_df}
         else:
-            # Group by classification indicator combinations (like R code does)
-            # This creates groups based on the binary indicator patterns
+            # Group by the 'group' column (assigned classification)
             dfs_to_analyze = {}
-            grouped = self.df.groupby(self.CLASSIFICATION_FIELDS, dropna=False)
-
-            for indicator_combo, group_df in grouped:
-                # Create a descriptive name from the indicator pattern
-                pattern_name = self._get_pattern_name(indicator_combo)
-                dfs_to_analyze[pattern_name] = group_df
+            for group_name, group_df in classified_df.groupby("group"):
+                dfs_to_analyze[group_name] = group_df
 
         all_stats = []
 
         for group_name, group_df in dfs_to_analyze.items():
-            stats_dict = {"classification_pattern": group_name, "count": len(group_df)}
+            stats_dict = {"group": group_name, "count": len(group_df)}
 
             for field in self.NUMERIC_FIELDS:
                 if field in group_df.columns:
@@ -202,26 +200,36 @@ class FarmAnalyzer:
             all_stats.append(stats_dict)
 
         stats_df = pd.DataFrame(all_stats)
+
+        # Sort by group name for consistent ordering
+        if not stats_df.empty and "group" in stats_df.columns:
+            # Define desired group order
+            group_order = ["Muku", "Muku_Amme", "Milchvieh", "BKMmZ", "BKMoZ", "IKM"]
+            stats_df["group"] = pd.Categorical(
+                stats_df["group"], categories=group_order, ordered=True
+            )
+            stats_df = stats_df.sort_values("group").reset_index(drop=True)
+
         logger.info(f"Calculated statistics for {len(all_stats)} groups")
 
         return stats_df
 
     def get_summary_by_group(self) -> pd.DataFrame:
         """
-        Get a summary table with key metrics grouped by classification pattern.
+        Get a summary table with key metrics grouped by farm group.
 
         Returns:
-            DataFrame with summary statistics for each classification pattern
+            DataFrame with summary statistics for each farm group
 
         Note:
             This provides a condensed view with the most important metrics.
-            Grouping is based on classification indicators, not the 'group' column.
+            Only includes classified farms (excludes Unclassified).
         """
         summary_stats = self.calculate_group_statistics()
 
         # Select key columns for summary
         key_columns = [
-            "classification_pattern",
+            "group",
             "count",
             "n_animals_total_mean",
             "n_animals_total_median",
@@ -314,46 +322,72 @@ class FarmAnalyzer:
 
         Note:
             Default sheets (always included):
-            - Summary: Overview statistics by classification pattern (from R code logic)
-            - Detailed_Stats: Full statistics for all metrics by classification pattern
-            - Pattern_Counts: Counts by classification indicators
+            - Summary: Overview statistics by farm group
+            - Detailed_Stats: Full statistics for all metrics by farm group
+            - Group_Counts: Counts of farms in each group
 
             Validation sheets (only if include_validation=True):
-            - Group_Counts_Validation: Validation counts by 'group' column
-            - Validation_Comparison: Comparison between patterns and groups
+            - Pattern_Counts: Counts by raw classification indicator patterns (for debugging)
+            - Validation_Comparison: Comparison between patterns and assigned groups
         """
         with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
-            # Summary sheet - based on classification indicators (R code logic)
+            # Summary sheet - based on assigned groups
             summary = self.get_summary_by_group()
             summary.to_excel(writer, sheet_name="Summary", index=False)
 
-            # Detailed statistics sheet - based on classification indicators
+            # Detailed statistics sheet - based on assigned groups
             detailed_stats = self.calculate_group_statistics()
             detailed_stats.to_excel(writer, sheet_name="Detailed_Stats", index=False)
 
-            # Classification pattern counts (actual analysis grouping)
-            pattern_counts = (
-                self.df.groupby(self.CLASSIFICATION_FIELDS).size().reset_index(name="count")
-            )
-            # Add pattern names
-            pattern_counts["classification_pattern"] = pattern_counts.apply(
-                lambda row: self._get_pattern_name(
-                    tuple(row[field] for field in self.CLASSIFICATION_FIELDS)
-                ),
-                axis=1,
-            )
-            # Reorder columns
-            pattern_counts = pattern_counts[
-                ["classification_pattern"] + self.CLASSIFICATION_FIELDS + ["count"]
+            # Group counts
+            counts = self.get_group_counts()
+            counts_df = pd.DataFrame(list(counts.items()), columns=["Group", "Count"])
+            # Sort by group name
+            group_order = [
+                "Muku",
+                "Muku_Amme",
+                "Milchvieh",
+                "BKMmZ",
+                "BKMoZ",
+                "IKM",
+                "Unclassified",
             ]
-            pattern_counts.to_excel(writer, sheet_name="Pattern_Counts", index=False)
+            counts_df["Group"] = pd.Categorical(
+                counts_df["Group"], categories=group_order, ordered=True
+            )
+            counts_df = counts_df.sort_values("Group").reset_index(drop=True)
+            counts_df.to_excel(writer, sheet_name="Group_Counts", index=False)
 
             # Validation sheets (only if requested)
             if include_validation:
-                # Group counts from 'group' column for validation
-                counts = self.get_group_counts()
-                counts_df = pd.DataFrame(list(counts.items()), columns=["Group", "Count"])
-                counts_df.to_excel(writer, sheet_name="Group_Counts_Validation", index=False)
+                # Raw classification pattern counts (for debugging/validation)
+                pattern_counts = (
+                    self.df.groupby(self.CLASSIFICATION_FIELDS).size().reset_index(name="count")
+                )
+                # Add pattern names
+                pattern_counts["pattern_string"] = pattern_counts.apply(
+                    lambda row: self._get_pattern_name(
+                        tuple(row[field] for field in self.CLASSIFICATION_FIELDS)
+                    ),
+                    axis=1,
+                )
+                # Add assigned group
+                pattern_with_group = (
+                    self.df.groupby(self.CLASSIFICATION_FIELDS + ["group"])
+                    .size()
+                    .reset_index(name="count")
+                )
+                pattern_with_group["pattern_string"] = pattern_with_group.apply(
+                    lambda row: self._get_pattern_name(
+                        tuple(row[field] for field in self.CLASSIFICATION_FIELDS)
+                    ),
+                    axis=1,
+                )
+                # Reorder columns
+                pattern_with_group = pattern_with_group[
+                    ["pattern_string"] + self.CLASSIFICATION_FIELDS + ["group", "count"]
+                ]
+                pattern_with_group.to_excel(writer, sheet_name="Pattern_Counts", index=False)
 
                 # Comparison between classification patterns and assigned groups
                 comparison_df = self._create_validation_comparison()

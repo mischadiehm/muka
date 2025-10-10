@@ -295,6 +295,16 @@ def analyze(
             help="Include validation sheets comparing classification patterns with group column",
         ),
     ] = False,
+    use_four_indicators: Annotated[
+        bool,
+        typer.Option(
+            "--use-4-indicators",
+            help=(
+                "Use only 4 indicators for classification (OLD method, ignores slaughter fields). "
+                "Default is to use all 6 indicators (NEW method)."
+            ),
+        ),
+    ] = False,
     theme: Annotated[
         ColorScheme,
         typer.Option(
@@ -334,6 +344,14 @@ def analyze(
         config.classification.show_unclassified_warnings = True
 
     output.section("MuKa Farm Classification & Analysis")
+
+    # Show classification mode
+    if use_four_indicators:
+        output.info("Using 4-indicator classification (OLD method - ignoring slaughter fields)")
+        logger.info("Classification mode: 4 indicators (OLD)")
+    else:
+        output.info("Using 6-indicator classification (NEW method - includes slaughter fields)")
+        logger.info("Classification mode: 6 indicators (NEW)")
 
     try:
         # Set default paths
@@ -385,7 +403,9 @@ def analyze(
 
             # Classify farms
             task2 = progress.add_task("Classifying farms...", total=None)
-            classifier = FarmClassifier()
+            # Use 6 indicators by default, unless --use-4-indicators flag is set
+            use_six = not use_four_indicators
+            classifier = FarmClassifier(use_six_indicators=use_six)
             farms = classifier.classify_farms(farms)
             progress.update(task2, description="✓ Farms classified")
 
@@ -457,7 +477,7 @@ def analyze(
             output.print("")
 
             # Show summary statistics
-            output.header("Summary Statistics by Classification Pattern")
+            output.header("Summary Statistics by Farm Group")
             summary_df = analyzer.get_summary_by_group()
 
             if not summary_df.empty:
@@ -465,7 +485,7 @@ def analyze(
                 stats_table = output.create_table(
                     "Statistics",
                     [
-                        ("Classification Pattern", "header"),
+                        ("Farm Group", "header"),
                         ("Count", "data"),
                         ("Avg Animals", "data"),
                         ("Median Animals", "data"),
@@ -476,7 +496,7 @@ def analyze(
 
                 for _, row in summary_df.iterrows():
                     stats_table.add_row(
-                        str(row.get("classification_pattern", "N/A")),
+                        str(row.get("group", "N/A")),
                         f"{int(row.get('count', 0)):,}",
                         f"{row.get('n_animals_total_mean', 0):.1f}",
                         f"{row.get('n_animals_total_median', 0):.1f}",

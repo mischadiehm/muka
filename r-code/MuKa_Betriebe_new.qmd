@@ -69,7 +69,7 @@ group_ref <- data.frame(
   ),
   Muku = c(0, 0, 0, 0),
   Muku_Amme = c(0, 0, 1, 0),
-  Milchvieh = c(1, 0, 0,  1),
+  Milchvieh = c(1, 0, 0, 1),
   BKMmZ = c(1, 0, 1, 0),
   BKMoZ = c(1, 0, 0, 0),
   IKM = c(0, 1, 1, 0)

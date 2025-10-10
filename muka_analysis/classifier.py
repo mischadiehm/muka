@@ -26,22 +26,36 @@ class FarmClassifier:
     defines the expected binary pattern for a specific farm group.
     """
 
-    def __init__(self) -> None:
-        """Initialize the classifier with predefined group profiles."""
-        self.profiles: List[GroupProfile] = self._create_profiles()
-        logger.info(f"Classifier initialized with {len(self.profiles)} group profiles")
+    def __init__(self, use_six_indicators: Optional[bool] = None) -> None:
+        """
+        Initialize the classifier with predefined group profiles.
+
+        Args:
+            use_six_indicators: If True, use 6 indicators (including slaughter fields).
+                               If False, use 4 indicators only (ignoring slaughter fields).
+                               If None, use configuration setting.
+        """
+        if use_six_indicators is None:
+            config = get_config()
+            use_six_indicators = config.classification.use_six_indicators
+
+        self.use_six_indicators = use_six_indicators
+        self.profiles: List[GroupProfile] = self._create_profiles(use_six_indicators)
+        indicator_mode = "6 indicators" if use_six_indicators else "4 indicators"
+        logger.info(
+            f"Classifier initialized with {len(self.profiles)} group profiles ({indicator_mode})"
+        )
 
     @staticmethod
-    def _create_profiles() -> List[GroupProfile]:
+    def _create_profiles(use_six_indicators: bool = True) -> List[GroupProfile]:
         """
         Create the lookup table of farm group profiles.
 
         Each profile defines the expected binary pattern for classification.
-        The pattern is based on four binary indicators:
-        1. Female dairy cattle (1_femaleDairyCattle_V2)
-        2. Other female cattle (2_femaleCattle)
-        3. Calf arrivals under 85 days (3_calf85Arrivals)
-        4. Calf non-slaughter leavings under 51 days (5_calf51nonSlaughterLeavings)
+
+        Args:
+            use_six_indicators: If True, uses all 6 indicators (NEW classification).
+                               If False, uses only 4 indicators (OLD classification).
 
         Returns:
             List of GroupProfile objects defining each farm group
@@ -49,63 +63,165 @@ class FarmClassifier:
         Note:
             The order of profiles matters for classification priority.
             More specific patterns should come before more general ones.
+
+            NEW Patterns (6 fields):
+            - Muku:       [0, 0, 0, 0, 0, 1]
+            - Muku_Amme:  [0, 0, 1, 0, 0, 1]
+            - Milchvieh:  [1, 0, 0, 1, (0||1), (0||1)] - accepts any value for fields 5&6
+            - BKMmZ:      [1, 0, 1, 0, 0, 1]
+            - BKMoZ:      [1, 0, 0, 0, 0, 1]
+            - IKM:        [0, 1, 1, 0, 0, 1]
+
+            OLD Patterns (4 fields, ignoring slaughter indicators):
+            - Muku:       [0, 0, 0, 0, *, *]
+            - Muku_Amme:  [0, 0, 1, 0, *, *]
+            - Milchvieh:  [1, 0, 0, 1, *, *]
+            - BKMmZ:      [1, 0, 1, 0, *, *]
+            - BKMoZ:      [1, 0, 0, 0, *, *]
+            - IKM:        [0, 1, 1, 0, *, *]
         """
-        profiles = [
-            # Muku: Mother cow farms without nurse cows
-            # No dairy cattle, no other female cattle, no arrivals, no leavings
-            GroupProfile(
-                group_name=FarmGroup.MUKU,
-                female_dairy_cattle=0,
-                female_cattle=0,
-                calf_arrivals=0,
-                calf_non_slaughter_leavings=0,
-            ),
-            # Muku_Amme: Mother cow farms with nurse cows
-            # No dairy cattle, no other female cattle, has arrivals, no leavings
-            GroupProfile(
-                group_name=FarmGroup.MUKU_AMME,
-                female_dairy_cattle=0,
-                female_cattle=0,
-                calf_arrivals=1,
-                calf_non_slaughter_leavings=0,
-            ),
-            # Milchvieh: Dairy farms
-            # Has dairy cattle, no other female cattle, no arrivals, has leavings
-            GroupProfile(
-                group_name=FarmGroup.MILCHVIEH,
-                female_dairy_cattle=1,
-                female_cattle=0,
-                calf_arrivals=0,
-                calf_non_slaughter_leavings=1,
-            ),
-            # BKMmZ: Combined keeping dairy with breeding
-            # Has dairy cattle, no other female cattle, has arrivals, no leavings
-            GroupProfile(
-                group_name=FarmGroup.BKMMZ,
-                female_dairy_cattle=1,
-                female_cattle=0,
-                calf_arrivals=1,
-                calf_non_slaughter_leavings=0,
-            ),
-            # BKMoZ: Combined keeping dairy without breeding
-            # Has dairy cattle, no other female cattle, no arrivals, no leavings
-            GroupProfile(
-                group_name=FarmGroup.BKMOZ,
-                female_dairy_cattle=1,
-                female_cattle=0,
-                calf_arrivals=0,
-                calf_non_slaughter_leavings=0,
-            ),
-            # IKM: Intensive calf rearing
-            # No dairy cattle, has other female cattle, has arrivals, no leavings
-            GroupProfile(
-                group_name=FarmGroup.IKM,
-                female_dairy_cattle=0,
-                female_cattle=1,
-                calf_arrivals=1,
-                calf_non_slaughter_leavings=0,
-            ),
-        ]
+        if use_six_indicators:
+            # NEW: 6-indicator classification (with slaughter fields)
+            profiles = [
+                # Muku: Mother cow farms without nurse cows
+                # Pattern: [0, 0, 0, 0, 0, 1]
+                GroupProfile(
+                    group_name=FarmGroup.MUKU,
+                    female_dairy_cattle=0,
+                    female_cattle=0,
+                    calf_arrivals=0,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=0,
+                    young_slaughterings=1,
+                ),
+                # Muku_Amme: Mother cow farms with nurse cows
+                # Pattern: [0, 0, 1, 0, 0, 1]
+                GroupProfile(
+                    group_name=FarmGroup.MUKU_AMME,
+                    female_dairy_cattle=0,
+                    female_cattle=0,
+                    calf_arrivals=1,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=0,
+                    young_slaughterings=1,
+                ),
+                # Milchvieh: Dairy farms
+                # Pattern: [1, 0, 0, 1, (0||1), (0||1)] - accepts any value for fields 5&6
+                # Using None to match any value for female_slaughterings and young_slaughterings
+                GroupProfile(
+                    group_name=FarmGroup.MILCHVIEH,
+                    female_dairy_cattle=1,
+                    female_cattle=0,
+                    calf_arrivals=0,
+                    calf_non_slaughter_leavings=1,
+                    female_slaughterings=None,  # Accepts 0 or 1
+                    young_slaughterings=None,  # Accepts 0 or 1
+                ),
+                # BKMmZ: Combined keeping dairy with breeding
+                # Pattern: [1, 0, 1, 0, 0, 1]
+                GroupProfile(
+                    group_name=FarmGroup.BKMMZ,
+                    female_dairy_cattle=1,
+                    female_cattle=0,
+                    calf_arrivals=1,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=0,
+                    young_slaughterings=1,
+                ),
+                # BKMoZ: Combined keeping dairy without breeding
+                # Pattern: [1, 0, 0, 0, 0, 1]
+                GroupProfile(
+                    group_name=FarmGroup.BKMOZ,
+                    female_dairy_cattle=1,
+                    female_cattle=0,
+                    calf_arrivals=0,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=0,
+                    young_slaughterings=1,
+                ),
+                # IKM: Intensive calf rearing
+                # Pattern: [0, 1, 1, 0, 0, 1]
+                GroupProfile(
+                    group_name=FarmGroup.IKM,
+                    female_dairy_cattle=0,
+                    female_cattle=1,
+                    calf_arrivals=1,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=0,
+                    young_slaughterings=1,
+                ),
+            ]
+        else:
+            # OLD: 4-indicator classification (ignoring slaughter fields)
+            # Use None for slaughter fields to accept any value
+            profiles = [
+                # Muku: Mother cow farms without nurse cows
+                # Pattern: [0, 0, 0, 0, *, *]
+                GroupProfile(
+                    group_name=FarmGroup.MUKU,
+                    female_dairy_cattle=0,
+                    female_cattle=0,
+                    calf_arrivals=0,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=None,  # Ignore
+                    young_slaughterings=None,  # Ignore
+                ),
+                # Muku_Amme: Mother cow farms with nurse cows
+                # Pattern: [0, 0, 1, 0, *, *]
+                GroupProfile(
+                    group_name=FarmGroup.MUKU_AMME,
+                    female_dairy_cattle=0,
+                    female_cattle=0,
+                    calf_arrivals=1,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=None,  # Ignore
+                    young_slaughterings=None,  # Ignore
+                ),
+                # Milchvieh: Dairy farms
+                # Pattern: [1, 0, 0, 1, *, *]
+                GroupProfile(
+                    group_name=FarmGroup.MILCHVIEH,
+                    female_dairy_cattle=1,
+                    female_cattle=0,
+                    calf_arrivals=0,
+                    calf_non_slaughter_leavings=1,
+                    female_slaughterings=None,  # Ignore
+                    young_slaughterings=None,  # Ignore
+                ),
+                # BKMmZ: Combined keeping dairy with breeding
+                # Pattern: [1, 0, 1, 0, *, *]
+                GroupProfile(
+                    group_name=FarmGroup.BKMMZ,
+                    female_dairy_cattle=1,
+                    female_cattle=0,
+                    calf_arrivals=1,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=None,  # Ignore
+                    young_slaughterings=None,  # Ignore
+                ),
+                # BKMoZ: Combined keeping dairy without breeding
+                # Pattern: [1, 0, 0, 0, *, *]
+                GroupProfile(
+                    group_name=FarmGroup.BKMOZ,
+                    female_dairy_cattle=1,
+                    female_cattle=0,
+                    calf_arrivals=0,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=None,  # Ignore
+                    young_slaughterings=None,  # Ignore
+                ),
+                # IKM: Intensive calf rearing
+                # Pattern: [0, 1, 1, 0, *, *]
+                GroupProfile(
+                    group_name=FarmGroup.IKM,
+                    female_dairy_cattle=0,
+                    female_cattle=1,
+                    calf_arrivals=1,
+                    calf_non_slaughter_leavings=0,
+                    female_slaughterings=None,  # Ignore
+                    young_slaughterings=None,  # Ignore
+                ),
+            ]
 
         return profiles
 
@@ -141,13 +257,17 @@ class FarmClassifier:
                 female_cattle=farm.indicator_female_cattle,
                 calf_arrivals=farm.indicator_calf_arrivals,
                 calf_leavings=farm.indicator_calf_leavings,
+                female_slaughter=farm.indicator_female_slaughterings,
+                young_slaughter=farm.indicator_young_slaughterings,
             ):
                 logger.debug(
                     f"Farm {farm.tvd} classified as {profile.group_name.value} "
                     f"[{farm.indicator_female_dairy_cattle_v2}, "
                     f"{farm.indicator_female_cattle}, "
                     f"{farm.indicator_calf_arrivals}, "
-                    f"{farm.indicator_calf_leavings}]"
+                    f"{farm.indicator_calf_leavings}, "
+                    f"{farm.indicator_female_slaughterings}, "
+                    f"{farm.indicator_young_slaughterings}]"
                 )
                 return profile.group_name
 
@@ -159,7 +279,9 @@ class FarmClassifier:
                 f"[{farm.indicator_female_dairy_cattle_v2}, "
                 f"{farm.indicator_female_cattle}, "
                 f"{farm.indicator_calf_arrivals}, "
-                f"{farm.indicator_calf_leavings}]"
+                f"{farm.indicator_calf_leavings}, "
+                f"{farm.indicator_female_slaughterings}, "
+                f"{farm.indicator_young_slaughterings}]"
             )
         else:
             logger.debug(
@@ -167,7 +289,9 @@ class FarmClassifier:
                 f"[{farm.indicator_female_dairy_cattle_v2}, "
                 f"{farm.indicator_female_cattle}, "
                 f"{farm.indicator_calf_arrivals}, "
-                f"{farm.indicator_calf_leavings}]"
+                f"{farm.indicator_calf_leavings}, "
+                f"{farm.indicator_female_slaughterings}, "
+                f"{farm.indicator_young_slaughterings}]"
             )
         return None
 

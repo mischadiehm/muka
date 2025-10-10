@@ -54,6 +54,45 @@ uv run python -m muka_analysis --help
 uv run python -m muka_analysis analyze --help
 ```
 
+### Classification Mode: 4 vs 6 Indicators
+
+The tool supports two classification modes:
+
+**NEW Method (Default): 6 indicators** - More precise classification
+```bash
+# Uses all 6 indicators including slaughter fields (default)
+uv run python -m muka_analysis analyze
+```
+
+**OLD Method: 4 indicators** - Broader classification (ignores slaughter fields)
+```bash
+# Uses only first 4 indicators, ignores slaughter fields
+uv run python -m muka_analysis analyze --use-4-indicators
+```
+
+**Comparison:**
+
+| Mode | Indicators Used | Classified Farms | Unclassified Farms | Notes |
+|------|----------------|------------------|--------------------|-------|
+| 6-indicator (NEW) | All 6 fields | ~59% (20,685) | ~41% (14,236) | More precise, stricter matching |
+| 4-indicator (OLD) | First 4 only | ~74% (25,940) | ~26% (8,981) | More flexible, ignores slaughter patterns |
+
+**When to use 4-indicator mode:**
+- You want to ignore slaughter behavior patterns
+- You need broader classification with fewer unclassified farms
+- You're comparing with older analyses that didn't use slaughter fields
+
+**When to use 6-indicator mode (default):**
+- You want the most precise classification
+- Slaughter patterns are important for your analysis
+- You're following the current R code implementation
+
+The mode can also be configured in `muka_config.toml`:
+```toml
+[classification]
+use_six_indicators = true  # false for 4-indicator mode
+```
+
 ### Analysis Output
 
 The analysis displays results directly in the terminal with:

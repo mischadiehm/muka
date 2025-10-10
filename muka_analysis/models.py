@@ -52,6 +52,8 @@ class GroupProfile(BaseModel):
         female_cattle: Whether farm has female cattle other than dairy (1) or not (0)
         calf_arrivals: Whether farm has calf arrivals under 85 days (1) or not (0)
         calf_non_slaughter_leavings: Whether farm has non-slaughter leavings under 51 days (1) or not (0)
+        female_slaughterings: Whether farm has female slaughterings <731 days (1) or not (0), or None for any
+        young_slaughterings: Whether farm has young slaughterings 51-730 days (1) or not (0), or None for any
     """
 
     group_name: FarmGroup
@@ -67,19 +69,42 @@ class GroupProfile(BaseModel):
     calf_non_slaughter_leavings: int = Field(
         ..., ge=0, le=1, description="Binary indicator for calf leavings <51 days"
     )
+    female_slaughterings: Optional[int] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Binary indicator for female slaughterings <731 days (None = any)",
+    )
+    young_slaughterings: Optional[int] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Binary indicator for young slaughterings 51-730 days (None = any)",
+    )
 
     @field_validator(
-        "female_dairy_cattle", "female_cattle", "calf_arrivals", "calf_non_slaughter_leavings"
+        "female_dairy_cattle",
+        "female_cattle",
+        "calf_arrivals",
+        "calf_non_slaughter_leavings",
+        "female_slaughterings",
+        "young_slaughterings",
     )
     @classmethod
-    def validate_binary(cls, v: int) -> int:
-        """Validate that value is binary (0 or 1)."""
-        if v not in [0, 1]:
-            raise ValueError(f"Value must be 0 or 1, got {v}")
+    def validate_binary(cls, v: Optional[int]) -> Optional[int]:
+        """Validate that value is binary (0 or 1) or None."""
+        if v is not None and v not in [0, 1]:
+            raise ValueError(f"Value must be 0, 1, or None, got {v}")
         return v
 
     def matches(
-        self, female_dairy: int, female_cattle: int, calf_arrivals: int, calf_leavings: int
+        self,
+        female_dairy: int,
+        female_cattle: int,
+        calf_arrivals: int,
+        calf_leavings: int,
+        female_slaughter: int,
+        young_slaughter: int,
     ) -> bool:
         """
         Check if a farm's criteria match this profile.
@@ -89,15 +114,22 @@ class GroupProfile(BaseModel):
             female_cattle: Binary indicator for other female cattle
             calf_arrivals: Binary indicator for calf arrivals
             calf_leavings: Binary indicator for calf non-slaughter leavings
+            female_slaughter: Binary indicator for female slaughterings <731 days
+            young_slaughter: Binary indicator for young slaughterings 51-730 days
 
         Returns:
             True if all criteria match this profile, False otherwise
+
+        Note:
+            If a profile field is None, it matches any value for that field.
         """
         return (
             self.female_dairy_cattle == female_dairy
             and self.female_cattle == female_cattle
             and self.calf_arrivals == calf_arrivals
             and self.calf_non_slaughter_leavings == calf_leavings
+            and (self.female_slaughterings is None or self.female_slaughterings == female_slaughter)
+            and (self.young_slaughterings is None or self.young_slaughterings == young_slaughter)
         )
 
 
@@ -170,6 +202,12 @@ class FarmData(BaseModel):
     )
     indicator_calf_leavings: int = Field(
         ..., ge=0, le=1, description="Binary: has calf leavings <51 days"
+    )
+    indicator_female_slaughterings: int = Field(
+        ..., ge=0, le=1, description="Binary: has female slaughterings <731 days"
+    )
+    indicator_young_slaughterings: int = Field(
+        ..., ge=0, le=1, description="Binary: has young slaughterings 51-730 days"
     )
 
     # Classification result
