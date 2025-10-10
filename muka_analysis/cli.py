@@ -90,28 +90,29 @@ def analyze(
 ) -> None:
     """
     Analyze and classify farms from CSV data.
-    
+
     This command runs the complete analysis pipeline:
     - Loads and validates farm data from CSV
     - Classifies farms into groups based on binary indicators
     - Generates summary statistics and analysis
     - Saves classified data and analysis results
-    
+
     Example:
         [bold]muka-analysis analyze --input data.csv --output results.csv[/bold]
     """
     # Initialize output interface
     output = init_output(color_scheme=theme, verbose=verbose)
     logger = logging.getLogger(__name__)
-    
+
     # Update configuration with CLI parameter if provided
     from muka_analysis.config import get_config
+
     config = get_config()
     if show_unclassified_warnings:
         config.classification.show_unclassified_warnings = True
-    
+
     output.section("MuKa Farm Classification & Analysis")
-    
+
     try:
         # Set default paths
         if input_file is None:
@@ -120,7 +121,7 @@ def analyze(
             output_file = Path("output/classified_farms.csv")
         if excel_file is None:
             excel_file = Path("output/analysis_summary.xlsx")
-        
+
         # Check if output files exist and prompt for overwrite
         if not force:
             existing_files = []
@@ -128,59 +129,59 @@ def analyze(
                 existing_files.append(output_file)
             if excel_file.exists():
                 existing_files.append(excel_file)
-            
+
             if existing_files:
                 output.show_file_list(
                     "⚠️  The following files already exist:",
                     existing_files,
                 )
-                
+
                 if not output.confirm("\nDo you want to overwrite them?"):
                     output.error("Analysis cancelled.")
                     raise typer.Exit(1)
-        
+
         # Create output directories
         output_file.parent.mkdir(parents=True, exist_ok=True)
         excel_file.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Run analysis with progress indicators
         with output.simple_progress() as progress:
-            
+
             # Load and validate data
             task1 = progress.add_task("Loading and validating data...", total=None)
             logger.info(f"Loading data from: {input_file}")
-            
+
             if not input_file.exists():
                 output.error(f"Input file not found: {input_file}")
                 raise typer.Exit(1)
-            
+
             farms = IOUtils.read_and_parse(input_file)
             progress.update(task1, description="✓ Data loaded and validated")
-            
+
             # Classify farms
             task2 = progress.add_task("Classifying farms...", total=None)
             classifier = FarmClassifier()
             for farm in farms:
                 classifier.classify_farm(farm)
             progress.update(task2, description="✓ Farms classified")
-            
+
             # Analyze results
             task3 = progress.add_task("Analyzing results...", total=None)
             analyzer = FarmAnalyzer(farms)
             analyzer.get_summary_by_group()  # Generate summary internally
             progress.update(task3, description="✓ Analysis completed")
-            
+
             # Save results
             task4 = progress.add_task("Saving results...", total=None)
             IOUtils.write_results(farms, output_file)
-            
+
             # Save analysis to Excel
             analyzer.export_summary_to_excel(str(excel_file))
             progress.update(task4, description="✓ Results saved")
-        
+
         # Display summary
         output.success("Analysis completed successfully!")
-        
+
         # Create summary data
         summary_data = {
             "Total Farms": len(farms),
@@ -188,25 +189,25 @@ def analyze(
             "Output File": str(output_file),
             "Excel Report": str(excel_file),
         }
-        
+
         # Add group counts from farms
         group_counts: Counter[str] = Counter()
         for farm in farms:
             if farm.group:
-                if hasattr(farm.group, 'value'):
+                if hasattr(farm.group, "value"):
                     group_counts[farm.group.value] += 1
                 else:
                     group_counts[str(farm.group)] += 1
             else:
                 group_counts["Unclassified"] += 1
-        
+
         # Add group counts to summary
         for group, count in sorted(group_counts.items()):
             summary_data[f"Group {group}"] = count
-        
+
         # Show summary table
         output.show_summary("Analysis Summary", summary_data)
-        
+
     except Exception as e:
         logger.error(f"Analysis failed: {e}", exc_info=True)
         output.error(f"Analysis failed: {e}")
@@ -244,40 +245,40 @@ def validate(
 ) -> None:
     """
     Validate CSV file format and data quality.
-    
+
     This command performs comprehensive validation of the input CSV file
     without running the full analysis pipeline.
-    
+
     Example:
         [bold]muka-analysis validate data.csv[/bold]
     """
     # Initialize output interface
     output = init_output(color_scheme=theme, verbose=verbose)
     logger = logging.getLogger(__name__)
-    
+
     output.section(f"Validating: {input_file}")
-    
+
     try:
         with output.simple_progress() as progress:
-            
+
             task = progress.add_task("Validating data...", total=None)
-            
+
             df = IOUtils.read_csv(input_file, validate=True)
-            
+
             progress.update(task, description="✓ Validation completed")
-        
+
         # If we get here, validation passed (IOUtils.read_csv would raise an exception if not)
         output.success("Validation passed!")
-        
+
         # Show data summary
         summary_data = {
             "Total Rows": len(df),
             "Total Columns": len(df.columns),
             "Missing Values": int(df.isnull().sum().sum()),
         }
-        
+
         output.show_summary("Data Summary", summary_data)
-            
+
     except Exception as e:
         logger.error(f"Validation failed: {e}", exc_info=True)
         output.error(f"Validation failed: {e}")

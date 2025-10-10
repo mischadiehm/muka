@@ -93,7 +93,7 @@ class ClassificationConfig(BaseModel):
         default=False,
         description="Allow missing values in non-critical fields",
     )
-    
+
     # Warning settings
     show_unclassified_warnings: bool = Field(
         default=False,
