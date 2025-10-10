@@ -80,7 +80,9 @@ def _show_unclassified_analysis(
         dairy, female, arrivals, leavings = pattern
 
         # Create explanation
-        output.data(f"📊 Pattern: [Dairy={dairy}, Female={female}, Arrivals={arrivals}, Leavings={leavings}]")
+        output.data(
+            f"📊 Pattern: [Dairy={dairy}, Female={female}, Arrivals={arrivals}, Leavings={leavings}]"
+        )
         output.data(f"   Farms affected: {len(pattern_farms):,}")
         output.print("")
 
@@ -151,9 +153,7 @@ def _show_unclassified_analysis(
 
         if matches_found:
             closest = matches_found[0]
-            output.data(
-                f"   Closest match would be '{closest[0]}', but this farm:"
-            )
+            output.data(f"   Closest match would be '{closest[0]}', but this farm:")
             for diff in closest[1]:
                 output.data(f"     • {diff}")
         else:
@@ -193,7 +193,9 @@ def _show_unclassified_analysis(
     for pattern, pattern_farms in sorted(
         pattern_groups.items(), key=lambda x: len(x[1]), reverse=True
     ):
-        percentage = (len(pattern_farms) / total_unclassified * 100) if total_unclassified > 0 else 0
+        percentage = (
+            (len(pattern_farms) / total_unclassified * 100) if total_unclassified > 0 else 0
+        )
         pattern_table.add_row(
             str(pattern[0]),
             str(pattern[1]),
@@ -286,6 +288,13 @@ def analyze(
             help="Show detailed analysis of unclassified farms with explanations",
         ),
     ] = False,
+    validate: Annotated[
+        bool,
+        typer.Option(
+            "--validate",
+            help="Include validation sheets comparing classification patterns with group column",
+        ),
+    ] = False,
     theme: Annotated[
         ColorScheme,
         typer.Option(
@@ -301,10 +310,16 @@ def analyze(
     This command runs the complete analysis pipeline:
     - Loads and validates farm data from CSV
     - Classifies farms into groups based on binary indicators
-    - Generates summary statistics and analysis
+    - Generates summary statistics and analysis based on classification patterns
     - Saves classified data and analysis results
 
+    The analysis groups farms by their classification indicator patterns (not by the
+    'group' column). Use --validate flag to include validation sheets that compare
+    the classification patterns with the 'group' column.
+
     Example:
+        [bold]muka-analysis analyze --save-analysis[/bold]
+        [bold]muka-analysis analyze --save-analysis --validate[/bold]
         [bold]muka-analysis analyze --input data.csv --output results.csv[/bold]
     """
     # Initialize output interface
@@ -386,8 +401,10 @@ def analyze(
 
             # Save analysis to Excel only if requested
             if excel_file:
-                analyzer.export_summary_to_excel(str(excel_file))
+                analyzer.export_summary_to_excel(str(excel_file), include_validation=validate)
                 logger.info(f"Analysis summary saved to {excel_file}")
+                if validate:
+                    logger.info("Validation sheets included in Excel output")
 
             progress.update(task4, description="✓ Results saved")
 
@@ -440,7 +457,7 @@ def analyze(
             output.print("")
 
             # Show summary statistics
-            output.header("Summary Statistics by Group")
+            output.header("Summary Statistics by Classification Pattern")
             summary_df = analyzer.get_summary_by_group()
 
             if not summary_df.empty:
@@ -448,7 +465,7 @@ def analyze(
                 stats_table = output.create_table(
                     "Statistics",
                     [
-                        ("Group", "header"),
+                        ("Classification Pattern", "header"),
                         ("Count", "data"),
                         ("Avg Animals", "data"),
                         ("Median Animals", "data"),
@@ -459,7 +476,7 @@ def analyze(
 
                 for _, row in summary_df.iterrows():
                     stats_table.add_row(
-                        str(row.get("group", "N/A")),
+                        str(row.get("classification_pattern", "N/A")),
                         f"{int(row.get('count', 0)):,}",
                         f"{row.get('n_animals_total_mean', 0):.1f}",
                         f"{row.get('n_animals_total_median', 0):.1f}",
