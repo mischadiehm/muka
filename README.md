@@ -4,6 +4,7 @@ A Python package for classifying and analyzing farm data based on cattle types a
 
 ## Features
 
+- 🤖 **MCP Server** - Natural language data interaction via Model Context Protocol
 - 🎨 **Modern CLI** with Rich console output and progress bars
 - 🎭 **Theme Support** - Dark/Light mode switching for better accessibility
 - ⚙️ **Centralized Configuration** - Type-safe settings via env vars, TOML, or defaults
@@ -67,6 +68,30 @@ The CLI supports three color schemes:
 - `--theme auto`: Auto-detect system theme (future feature)
 
 All commands support theme switching to ensure comfortable viewing in any environment.
+
+## 🤖 MCP Server - Natural Language Interface
+
+**NEW!** Interact with your farm data using natural language through our Model Context Protocol (MCP) server:
+
+```bash
+# Quick test
+uv run python test_mcp_server.py
+
+# Use with Claude Desktop or any MCP client
+# See MCP_QUICKSTART.md for setup
+```
+
+**Natural Language Examples:**
+- "How many dairy farms have more than 100 animals?"
+- "What's the average animal count for each group?"
+- "Show me statistics for Muku farms"
+- "Are there any outliers in the data?"
+- "Compare dairy and Muku farms"
+- "Export the analysis to Excel"
+
+**Documentation:**
+- **[MCP_QUICKSTART.md](MCP_QUICKSTART.md)** - 5-minute setup guide
+- **[MCP_SERVER_GUIDE.md](MCP_SERVER_GUIDE.md)** - Complete reference
 
 ## Configuration
 

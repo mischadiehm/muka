@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "muka-analysis": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "-m",
+        "mcp_server.server"
+      ],
+      "cwd": "/home/mischa/git/i/muka",
+      "env": {
+        "MUKA_DEBUG": "false"
+      }
+    }
+  }
+}
