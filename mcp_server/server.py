@@ -371,17 +371,31 @@ async def list_tools() -> List[Tool]:
                 "Calculate a custom metric across farms using pandas-style expressions. "
                 "Can perform calculations, aggregations, and filtering on the data. "
                 "Supports mathematical operations, comparisons, and grouping. "
-                "Examples: "
-                "'Calculate average dairy proportion for each group', "
-                "'Find farms where calf arrivals exceed dairy cattle', "
-                "'Compute total animals sum by year and group'"
+                "All column names are available as variables for direct access. "
+                "\n\nSupported expression patterns:\n"
+                "- Column operations: n_animals_total.sum(), n_animals_total.mean()\n"
+                "- Comparisons: (n_animals_total > 100).sum()\n"
+                "- Between: n_animals_total.between(50, 100).sum()\n"
+                "- Multiple conditions: ((n_animals_total > 20) & (n_animals_total <= 50)).sum()\n"
+                "- Methods: n_animals_total.gt(500).sum(), n_animals_total.lt(20).sum()\n"
+                "- DataFrame access: df['column'].method() or df.column.method()\n"
+                "\nExamples:\n"
+                "'n_animals_total.sum()' - Sum all animals\n"
+                "'n_animals_total.mean()' - Average animals per farm\n"
+                "'(n_animals_total > 100).sum()' - Count farms with >100 animals\n"
+                "'n_animals_total.between(50, 100).sum()' - Count farms with 50-100 animals\n"
+                "'n_animals_total.describe()' - Full statistical summary"
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "expression": {
                         "type": "string",
-                        "description": "Pandas-style calculation expression",
+                        "description": (
+                            "Pandas-style calculation expression. "
+                            "Column names can be used directly (e.g., n_animals_total.sum()). "
+                            "Supports comparisons, boolean operations, and pandas methods."
+                        ),
                     },
                     "group_by": {
                         "type": "array",
@@ -734,6 +748,9 @@ async def handle_custom_metric(arguments: Dict[str, Any]) -> Dict[str, Any]:
         return {"error": "Data not loaded or classified. Load and classify data first."}
 
     expression = arguments.get("expression")
+    if not expression:
+        return {"error": "Expression is required"}
+
     group_by = arguments.get("group_by")
     filter_expr = arguments.get("filter")
 
@@ -756,8 +773,28 @@ async def handle_custom_metric(arguments: Dict[str, Any]) -> Dict[str, Any]:
             return {"error": f"Calculation failed: {e}"}
     else:
         try:
-            # Evaluate expression on entire dataset
-            result = eval(f"df.{expression}")
+            # Create a safe evaluation context with access to df, pd, and individual columns
+            # This allows expressions like: n_animals_total.sum(), (n_animals_total > 100).sum(), etc.
+            eval_context = {
+                "df": df,
+                "pd": pd,
+                "__builtins__": {},  # Restrict built-ins for safety
+            }
+
+            # Add all column names as variables pointing to the Series
+            for col in df.columns:
+                eval_context[col] = df[col]
+
+            # Evaluate the expression with the enriched context
+            # This supports both df.column.method() and column.method() syntax
+            if expression.startswith("df.") or expression.startswith("df["):
+                # Expression already references df explicitly
+                result = eval(expression, eval_context)
+            else:
+                # Expression uses column names directly or pandas methods
+                result = eval(expression, eval_context)
+
+            # Handle different result types
             if isinstance(result, pd.Series):
                 return {"result": result.to_dict()}
             elif isinstance(result, pd.DataFrame):
@@ -765,6 +802,7 @@ async def handle_custom_metric(arguments: Dict[str, Any]) -> Dict[str, Any]:
             else:
                 return {"result": result}
         except Exception as e:
+            logger.error(f"Custom metric calculation failed: {expression}", exc_info=True)
             return {"error": f"Calculation failed: {e}"}
 
 
