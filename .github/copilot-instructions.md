@@ -16,6 +16,18 @@ This is a research project that processes CSV files for scientific/analytical pu
 - **PACKAGE INSTALLATION:** Use `uv add <package>` not `pip install`
 - **REMEMBER:** uv manages the virtual environment automatically
 
+## CRITICAL: Configuration Management
+- **THIS PROJECT USES CENTRALIZED CONFIGURATION**
+- **ALWAYS** use `get_config()` to access configuration values
+- **NEVER** hardcode paths, thresholds, or other configurable values
+- **EXAMPLES:**
+  - ✅ `config = get_config(); path = config.paths.csv_dir`
+  - ✅ `threshold = get_config().classification.presence_threshold`
+  - ❌ `path = Path("csv")`
+  - ❌ `threshold = 0.0`
+- **CONFIGURATION:** Can be set via env vars (MUKA_*), config file, or defaults
+- **REMEMBER:** Configuration is validated at load time with Pydantic v2
+
 ## Core Requirements
 
 ### 1. Code Quality Standards
@@ -93,7 +105,109 @@ This is a research project that processes CSV files for scientific/analytical pu
 - **EXPLAIN** complex calculations with inline comments
 - **DOCUMENT** assumptions explicitly when unavoidable
 
-### 9. Output Interface Best Practices
+### 9. Configuration Management Best Practices
+
+#### Centralized Configuration
+- **ALWAYS** use `AppConfig` for ALL configurable values
+- **NEVER** hardcode paths, thresholds, or parameters
+- **ACCESS** via `get_config()` or pass config to functions
+- **INITIALIZE** at application start with `init_config()`
+
+#### Configuration Usage
+```python
+from muka_analysis.config import get_config
+
+# Get configuration
+config = get_config()
+
+# Access configuration sections
+csv_dir = config.paths.csv_dir
+output_dir = config.paths.output_dir
+threshold = config.classification.presence_threshold
+min_group_size = config.analysis.min_group_size
+
+# Use helper methods
+input_path = config.paths.get_default_input_path()
+output_path = config.paths.get_classified_output_path()
+```
+
+#### Configuration Sections
+Configuration is organized into logical sections:
+- **`paths`** - File and directory paths, default filenames
+- **`classification`** - Classification parameters and thresholds
+- **`analysis`** - Statistical analysis settings (confidence, percentiles, etc.)
+- **`validation`** - Data validation rules and tolerances
+- **`output`** - Output formatting (encoding, decimals, theme, etc.)
+- **`logging`** - Logging levels and format settings
+
+#### Configuration Sources (Priority Order)
+1. **Environment variables** (highest) - `MUKA_SECTION__SETTING`
+2. **Config file** (medium) - `muka_config.toml`
+3. **Defaults** (lowest) - Built-in default values
+
+Example environment variables:
+```bash
+export MUKA_DEBUG=true
+export MUKA_PATHS__CSV_DIR=/custom/data
+export MUKA_ANALYSIS__MIN_GROUP_SIZE=50
+export MUKA_OUTPUT__DEFAULT_THEME=light
+```
+
+#### Adding New Configuration
+When adding a new configurable value:
+1. Add field to appropriate config section in `config.py`
+2. Add to `muka_config.example.toml`
+3. Update documentation
+4. Use via `get_config()` in code
+
+```python
+# In config.py - Add to appropriate section
+class AnalysisConfig(BaseModel):
+    new_parameter: float = Field(
+        default=1.0,
+        ge=0.0,
+        description="Description of parameter",
+    )
+
+# In code - Use the configuration
+config = get_config()
+value = config.analysis.new_parameter
+```
+
+#### Configuration in Functions
+```python
+from muka_analysis.config import get_config
+import logging
+
+logger = logging.getLogger(__name__)
+
+def process_data() -> None:
+    """Process data using configuration."""
+    config = get_config()
+    
+    # Use paths from config
+    input_path = config.paths.get_default_input_path()
+    output_path = config.paths.get_classified_output_path()
+    
+    # Use parameters from config
+    if config.classification.require_all_fields:
+        # Validate all fields
+        pass
+    
+    # Use analysis settings
+    min_size = config.analysis.min_group_size
+    logger.info(f"Processing with min_group_size={min_size}")
+```
+
+#### Configuration Best Practices
+- **NEVER** hardcode what can be configured
+- **USE** `get_config()` consistently throughout codebase
+- **VALIDATE** configuration at startup (automatic with Pydantic)
+- **DOCUMENT** new configuration options clearly
+- **PROVIDE** sensible defaults for all settings
+- **TEST** with different configuration values
+
+### 10. Output Interface Best Practices
 
 #### Centralized Output Management
 - **ALWAYS** use `OutputInterface` for ALL console output, logging, and user interactions

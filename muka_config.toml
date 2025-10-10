@@ -1,0 +1,78 @@
+# MuKa Farm Analysis Configuration
+# ================================
+# This is an example configuration file in TOML format.
+# Copy this to 'muka_config.toml' and customize as needed.
+#
+# Configuration can also be set via environment variables using the prefix MUKA_
+# Example: MUKA_PATHS__CSV_DIR=/custom/path
+#
+# Priority (highest to lowest):
+# 1. Environment variables
+# 2. Configuration file (muka_config.toml)
+# 3. Default values
+
+# Application Settings
+# --------------------
+app_name = "MuKa Farm Analysis"
+version = "0.1.0"
+debug = false
+
+[paths]
+# Directory and file path settings
+csv_dir = "csv"
+output_dir = "output"
+log_file = "muka_analysis.log"
+
+# Default filenames
+default_input_file = "BetriebsFilter_Population_18_09_2025_guy_jr.csv"
+classified_output_file = "classified_farms.csv"
+summary_output_file = "analysis_summary.xlsx"
+
+[classification]
+# Farm classification parameters
+presence_threshold = 0.0        # Threshold for binary classification (>0 = present)
+require_all_fields = true       # Require all fields in input data
+allow_missing_values = false    # Allow missing values in non-critical fields
+
+[analysis]
+# Statistical analysis parameters
+confidence_level = 0.95         # Confidence level for statistics (0.0-1.0)
+percentiles = [0.25, 0.50, 0.75]  # Percentiles to calculate
+min_group_size = 1              # Minimum farms in group for reporting
+
+[validation]
+# Data validation parameters
+balance_tolerance_pct = 1.0     # Tolerance % for balance validation
+min_year = 2000                 # Minimum valid year
+max_year = 2100                 # Maximum valid year
+min_tvd = 1                     # Minimum valid TVD number
+
+[output]
+# Output formatting and display settings
+csv_encoding = "utf-8"          # CSV file encoding
+csv_separator = ","             # CSV field separator
+decimal_places = 2              # Decimal places in numeric output
+max_display_rows = 20           # Max rows in console output
+show_progress = true            # Show progress bars
+default_theme = "dark"          # Color theme: dark, light, or auto
+
+[logging]
+# Logging configuration
+console_level = "INFO"          # Console log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+file_level = "DEBUG"            # File log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+show_timestamps = true          # Include timestamps in logs
+show_module_names = true        # Include module names in logs
+
+# ================================================================================
+# Environment Variable Examples
+# ================================================================================
+# You can override any setting using environment variables with the MUKA_ prefix
+# and __ for nested values:
+#
+# export MUKA_DEBUG=true
+# export MUKA_PATHS__CSV_DIR=/data/input
+# export MUKA_PATHS__OUTPUT_DIR=/data/output
+# export MUKA_CLASSIFICATION__PRESENCE_THRESHOLD=0.5
+# export MUKA_ANALYSIS__MIN_GROUP_SIZE=10
+# export MUKA_OUTPUT__DEFAULT_THEME=light
+# export MUKA_LOGGING__CONSOLE_LEVEL=DEBUG

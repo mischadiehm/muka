@@ -13,6 +13,7 @@ Features:
 
 from muka_analysis.analyzer import FarmAnalyzer
 from muka_analysis.classifier import FarmClassifier
+from muka_analysis.config import AppConfig, get_config, init_config
 from muka_analysis.models import FarmData, FarmGroup, GroupProfile
 from muka_analysis.output import ColorScheme, OutputInterface, get_output, init_output
 from muka_analysis.validators import DataValidator
@@ -30,6 +31,9 @@ __all__ = [
     "ColorScheme",
     "get_output",
     "init_output",
+    "AppConfig",
+    "get_config",
+    "init_config",
 ]
 
 # Import CLI for easy access
