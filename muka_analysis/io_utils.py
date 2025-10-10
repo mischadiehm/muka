@@ -52,11 +52,10 @@ class IOUtils:
 
         try:
             # Read CSV with appropriate settings
-            # Skip the first row (description row) and use second row as header
+            # First row contains headers
             df = pd.read_csv(
                 file_path,
                 encoding="utf-8",
-                skiprows=[0],  # Skip first row with descriptions
                 on_bad_lines="warn",
             )
 
