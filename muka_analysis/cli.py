@@ -288,13 +288,6 @@ def analyze(
             help="Show detailed analysis of unclassified farms with explanations",
         ),
     ] = False,
-    validate: Annotated[
-        bool,
-        typer.Option(
-            "--validate",
-            help="Include validation sheets comparing classification patterns with group column",
-        ),
-    ] = False,
     use_four_indicators: Annotated[
         bool,
         typer.Option(
@@ -320,16 +313,11 @@ def analyze(
     This command runs the complete analysis pipeline:
     - Loads and validates farm data from CSV
     - Classifies farms into groups based on binary indicators
-    - Generates summary statistics and analysis based on classification patterns
+    - Generates summary statistics and analysis
     - Saves classified data and analysis results
-
-    The analysis groups farms by their classification indicator patterns (not by the
-    'group' column). Use --validate flag to include validation sheets that compare
-    the classification patterns with the 'group' column.
 
     Example:
         [bold]muka-analysis analyze --save-analysis[/bold]
-        [bold]muka-analysis analyze --save-analysis --validate[/bold]
         [bold]muka-analysis analyze --input data.csv --output results.csv[/bold]
     """
     # Initialize output interface
@@ -421,10 +409,8 @@ def analyze(
 
             # Save analysis to Excel only if requested
             if excel_file:
-                analyzer.export_summary_to_excel(str(excel_file), include_validation=validate)
+                analyzer.export_summary_to_excel(str(excel_file))
                 logger.info(f"Analysis summary saved to {excel_file}")
-                if validate:
-                    logger.info("Validation sheets included in Excel output")
 
             progress.update(task4, description="✓ Results saved")
 

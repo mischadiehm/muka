@@ -62,24 +62,6 @@ class FarmAnalyzer:
         self.df = self._create_dataframe()
         logger.info(f"Analyzer initialized with {len(farms)} farms")
 
-    def _get_pattern_name(self, indicator_combo: tuple) -> str:
-        """
-        Create a descriptive name from classification indicator pattern.
-
-        This method is kept for validation purposes but should not be used
-        for primary analysis. Use the 'group' field instead.
-
-        Args:
-            indicator_combo: Tuple of 6 indicators (female_dairy, female_cattle,
-                           calf_arrivals, calf_leavings, female_slaughterings, young_slaughterings)
-
-        Returns:
-            String representation like "Pattern_0-0-0-0-0-1"
-        """
-        # Convert tuple to string pattern (all 6 indicators)
-        pattern = "-".join(str(int(v)) for v in indicator_combo)
-        return f"Pattern_{pattern}"
-
     def _create_dataframe(self) -> pd.DataFrame:
         """
         Create a pandas DataFrame from farm data for analysis.
@@ -100,7 +82,7 @@ class FarmAnalyzer:
                     "indicator_calf_leavings": farm.indicator_calf_leavings,
                     "indicator_female_slaughterings": farm.indicator_female_slaughterings,
                     "indicator_young_slaughterings": farm.indicator_young_slaughterings,
-                    # Validation group (NOT used for analysis grouping)
+                    # Assigned group from classification
                     "group": (
                         farm.group.value
                         if farm.group and hasattr(farm.group, "value")
@@ -269,65 +251,18 @@ class FarmAnalyzer:
         """
         return [farm for farm in self.farms if farm.group is None]
 
-    def _create_validation_comparison(self) -> pd.DataFrame:
-        """
-        Create a comparison dataframe between classification patterns and assigned groups.
-
-        Returns:
-            DataFrame showing pattern vs group mismatches for validation
-
-        Note:
-            This helps identify cases where the classification logic differs
-            from the assigned group column.
-        """
-        # Create pattern names for each row
-        patterns = self.df.apply(
-            lambda row: self._get_pattern_name(
-                tuple(row[field] for field in self.CLASSIFICATION_FIELDS)
-            ),
-            axis=1,
-        )
-
-        # Get group values (convert None to "Unclassified")
-        groups = self.df["group"].fillna("Unclassified")
-
-        # Create comparison dataframe
-        comparison = pd.DataFrame(
-            {
-                "classification_pattern": patterns,
-                "assigned_group": groups,
-                "match": patterns == groups,
-            }
-        )
-
-        # Group by pattern and assigned group to show counts
-        summary = (
-            comparison.groupby(["classification_pattern", "assigned_group", "match"])
-            .size()
-            .reset_index(name="count")
-        )
-
-        # Sort by count descending
-        summary = summary.sort_values("count", ascending=False)
-
-        return summary
-
-    def export_summary_to_excel(self, file_path: str, include_validation: bool = False) -> None:
+    def export_summary_to_excel(self, file_path: str) -> None:
         """
         Export analysis summary to an Excel file with multiple sheets.
 
         Args:
             file_path: Path to output Excel file
-            include_validation: If True, include validation comparison sheets
 
         Note:
-            Default sheets (always included):
+            Sheets included:
             - Summary: Overview statistics by farm group
             - Detailed_Stats: Full statistics for all metrics by farm group
             - Group_Counts: Counts of farms in each group
-
-            Validation sheets (only if include_validation=True):
-            - Pattern_Counts: Counts by raw classification indicator patterns (for debugging)
             - Validation_Comparison: Comparison between patterns and assigned groups
         """
         with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
@@ -357,41 +292,6 @@ class FarmAnalyzer:
             )
             counts_df = counts_df.sort_values("Group").reset_index(drop=True)
             counts_df.to_excel(writer, sheet_name="Group_Counts", index=False)
-
-            # Validation sheets (only if requested)
-            if include_validation:
-                # Raw classification pattern counts (for debugging/validation)
-                pattern_counts = (
-                    self.df.groupby(self.CLASSIFICATION_FIELDS).size().reset_index(name="count")
-                )
-                # Add pattern names
-                pattern_counts["pattern_string"] = pattern_counts.apply(
-                    lambda row: self._get_pattern_name(
-                        tuple(row[field] for field in self.CLASSIFICATION_FIELDS)
-                    ),
-                    axis=1,
-                )
-                # Add assigned group
-                pattern_with_group = (
-                    self.df.groupby(self.CLASSIFICATION_FIELDS + ["group"])
-                    .size()
-                    .reset_index(name="count")
-                )
-                pattern_with_group["pattern_string"] = pattern_with_group.apply(
-                    lambda row: self._get_pattern_name(
-                        tuple(row[field] for field in self.CLASSIFICATION_FIELDS)
-                    ),
-                    axis=1,
-                )
-                # Reorder columns
-                pattern_with_group = pattern_with_group[
-                    ["pattern_string"] + self.CLASSIFICATION_FIELDS + ["group", "count"]
-                ]
-                pattern_with_group.to_excel(writer, sheet_name="Pattern_Counts", index=False)
-
-                # Comparison between classification patterns and assigned groups
-                comparison_df = self._create_validation_comparison()
-                comparison_df.to_excel(writer, sheet_name="Validation_Comparison", index=False)
 
         logger.info(f"Exported analysis summary to {file_path}")
 
