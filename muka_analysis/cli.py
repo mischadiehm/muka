@@ -53,9 +53,16 @@ def analyze(
         typer.Option(
             "--excel",
             "-x",
-            help="Path to output Excel file for analysis summary",
+            help="Path to output Excel file for analysis summary (only creates if specified)",
         ),
     ] = None,
+    save_analysis: Annotated[
+        bool,
+        typer.Option(
+            "--save-analysis",
+            help="Save detailed analysis to Excel file (default output/analysis_summary.xlsx)",
+        ),
+    ] = False,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -119,7 +126,9 @@ def analyze(
             input_file = Path("csv/BetriebsFilter_Population_18_09_2025_guy_jr.csv")
         if output_file is None:
             output_file = Path("output/classified_farms.csv")
-        if excel_file is None:
+
+        # Only set excel_file if save_analysis is True or excel_file is explicitly provided
+        if save_analysis and excel_file is None:
             excel_file = Path("output/analysis_summary.xlsx")
 
         # Check if output files exist and prompt for overwrite
@@ -127,7 +136,7 @@ def analyze(
             existing_files = []
             if output_file.exists():
                 existing_files.append(output_file)
-            if excel_file.exists():
+            if excel_file and excel_file.exists():
                 existing_files.append(excel_file)
 
             if existing_files:
@@ -142,7 +151,8 @@ def analyze(
 
         # Create output directories
         output_file.parent.mkdir(parents=True, exist_ok=True)
-        excel_file.parent.mkdir(parents=True, exist_ok=True)
+        if excel_file:
+            excel_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Run analysis with progress indicators
         with output.simple_progress() as progress:
@@ -175,38 +185,104 @@ def analyze(
             task4 = progress.add_task("Saving results...", total=None)
             IOUtils.write_results(farms, output_file)
 
-            # Save analysis to Excel
-            analyzer.export_summary_to_excel(str(excel_file))
+            # Save analysis to Excel only if requested
+            if excel_file:
+                analyzer.export_summary_to_excel(str(excel_file))
+                logger.info(f"Analysis summary saved to {excel_file}")
+
             progress.update(task4, description="✓ Results saved")
 
         # Display summary
         output.success("Analysis completed successfully!")
+        output.print("")  # Add spacing
 
-        # Create summary data
-        summary_data = {
-            "Total Farms": len(farms),
-            "Input File": str(input_file),
-            "Output File": str(output_file),
-            "Excel Report": str(excel_file),
-        }
+        # Show classification results
+        output.section("Classification Results")
 
-        # Add group counts from farms
+        # Count farms by group
         group_counts: Counter[str] = Counter()
+        classified_count = 0
         for farm in farms:
             if farm.group:
                 if hasattr(farm.group, "value"):
                     group_counts[farm.group.value] += 1
                 else:
                     group_counts[str(farm.group)] += 1
+                classified_count += 1
             else:
                 group_counts["Unclassified"] += 1
 
-        # Add group counts to summary
-        for group, count in sorted(group_counts.items()):
-            summary_data[f"Group {group}"] = count
+        total_farms = len(farms)
+        unclassified_count = group_counts.get("Unclassified", 0)
 
-        # Show summary table
-        output.show_summary("Analysis Summary", summary_data)
+        # Display classification overview
+        output.data(f"Total Farms: {total_farms:,}")
+        output.data(f"Classified: {classified_count:,} ({classified_count/total_farms*100:.1f}%)")
+        output.data(
+            f"Unclassified: {unclassified_count:,} ({unclassified_count/total_farms*100:.1f}%)"
+        )
+        output.print("")
+
+        # Show group distribution table if there are classified farms
+        if classified_count > 0:
+            output.header("Farm Distribution by Group")
+
+            # Create table for group distribution
+            group_table = output.create_table(
+                "Groups", [("Group", "header"), ("Count", "data"), ("Percentage", "highlight")]
+            )
+
+            for group, count in sorted(group_counts.items()):
+                if group != "Unclassified":
+                    percentage = (count / classified_count * 100) if classified_count > 0 else 0
+                    group_table.add_row(group, f"{count:,}", f"{percentage:.1f}%")
+
+            output.show_table(group_table)
+            output.print("")
+
+            # Show summary statistics
+            output.header("Summary Statistics by Group")
+            summary_df = analyzer.get_summary_by_group()
+
+            if not summary_df.empty:
+                # Create table for summary statistics
+                stats_table = output.create_table(
+                    "Statistics",
+                    [
+                        ("Group", "header"),
+                        ("Count", "data"),
+                        ("Avg Animals", "data"),
+                        ("Median Animals", "data"),
+                        ("Avg Females 3+", "data"),
+                        ("Median Females 3+", "data"),
+                    ],
+                )
+
+                for _, row in summary_df.iterrows():
+                    stats_table.add_row(
+                        str(row.get("group", "N/A")),
+                        f"{int(row.get('count', 0)):,}",
+                        f"{row.get('n_animals_total_mean', 0):.1f}",
+                        f"{row.get('n_animals_total_median', 0):.1f}",
+                        f"{row.get('n_females_age3_total_mean', 0):.1f}",
+                        f"{row.get('n_females_age3_total_median', 0):.1f}",
+                    )
+
+                output.show_table(stats_table)
+                output.print("")
+        else:
+            output.warning("No farms were successfully classified.")
+            output.info(
+                "All farms have patterns that don't match any defined classification profile."
+            )
+            output.print("")
+
+        # Show file outputs
+        output.section("Output Files")
+        output.data(f"Classified data: {output_file}")
+        if excel_file:
+            output.data(f"Analysis summary: {excel_file}")
+        output.print("")
 
     except Exception as e:
         logger.error(f"Analysis failed: {e}", exc_info=True)

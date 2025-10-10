@@ -3,6 +3,20 @@
 ## Project Context
 This is a research project that processes CSV files for scientific/analytical purposes. **Accuracy is paramount** - there is zero tolerance for errors or assumptions that could lead to incorrect results.
 
+## CRITICAL: NO SUMMARY FILES
+- **NEVER** create summary, changelog, or completion markdown files
+- **NEVER** create files like "CONFIGURATION_COMPLETE.md", "FEATURE_SUMMARY.md", etc.
+- **ONLY** update existing documentation files (README.md, USAGE.md, etc.)
+- **EXPLANATION:** These summary files clutter the repository and become outdated
+- **EXAMPLES:**
+  - ❌ CONFIGURATION_COMPLETE.md
+  - ❌ ANALYSIS_OUTPUT_IMPROVEMENTS.md
+  - ❌ FEATURE_IMPLEMENTATION_SUMMARY.md
+  - ❌ CHANGES_SUMMARY.md
+  - ✅ Update README.md instead
+  - ✅ Update relevant guide (CONFIGURATION_GUIDE.md, OUTPUT_INTERFACE_GUIDE.md, etc.)
+- **REMEMBER:** Commit messages and git history are for tracking changes, not markdown files
+
 ## CRITICAL: Environment Setup
 - **THIS PROJECT USES UV FOR PACKAGE MANAGEMENT**
 - **ALWAYS** run Python commands with `uv run python` prefix

@@ -27,14 +27,16 @@ uv sync  # Installs all dependencies automatically
 ### Basic Usage
 
 ```bash
-# Analyze with default settings (dark theme)
+# Analyze with default settings - results shown in terminal
 uv run python -m muka_analysis analyze
+
+# Save detailed analysis to Excel file
+uv run python -m muka_analysis analyze --save-analysis
 
 # Specify custom files and theme
 uv run python -m muka_analysis analyze \
     --input csv/your_data.csv \
     --output output/results.csv \
-    --excel output/summary.xlsx \
     --theme light
 
 # Use light theme for better visibility
@@ -45,6 +47,9 @@ uv run python -m muka_analysis analyze --verbose
 
 # Show warnings for farms that couldn't be classified
 uv run python -m muka_analysis analyze --show-unclassified-warnings
+
+# Save analysis to custom Excel file
+uv run python -m muka_analysis analyze --excel custom_analysis.xlsx
 
 # Validate data before analysis
 uv run python -m muka_analysis validate csv/your_data.csv
@@ -120,3 +125,16 @@ muka_analysis/
 - **BKMmZ**: Combined keeping dairy with breeding
 - **BKMoZ**: Combined keeping dairy without breeding
 - **IKM**: Intensive calf rearing
+
+## Documentation
+
+- **[README.md](README.md)** - This file, project overview and quick start
+- **[USAGE.md](USAGE.md)** - Detailed usage guide with examples
+- **[CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)** - Configuration system reference
+- **[OUTPUT_INTERFACE_GUIDE.md](OUTPUT_INTERFACE_GUIDE.md)** - Developer guide for output interface
+- **[VALIDATION.md](VALIDATION.md)** - Data validation documentation
+
+See also:
+- `demo_configuration.py` - Interactive configuration demo
+- `demo_output_interface.py` - Output interface demo
+- `muka_config.example.toml` - Example configuration file

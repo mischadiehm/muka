@@ -11,31 +11,55 @@ uv sync  # Installs all dependencies automatically
 
 ### Running the Analysis - Modern CLI
 
-The tool now features a modern CLI with Rich console output and Typer interface:
+The tool now features a modern CLI with Rich console output and Typer interface. Analysis results are beautifully displayed in the terminal, and Excel export is optional.
 
 ```bash
-# Basic analysis with default paths
+# Basic analysis - results shown in terminal, no Excel file
 uv run python -m muka_analysis analyze
+
+# Save analysis to Excel with default name (output/analysis_summary.xlsx)
+uv run python -m muka_analysis analyze --save-analysis
 
 # Specify custom input/output paths
 uv run python -m muka_analysis analyze \
     --input csv/your_data.csv \
-    --output output/results.csv \
-    --excel output/summary.xlsx
+    --output output/results.csv
+
+# Save analysis to custom Excel file
+uv run python -m muka_analysis analyze \
+    --excel custom_report.xlsx
 
 # Force overwrite existing files
 uv run python -m muka_analysis analyze \
-    --input csv/your_data.csv \
-    --output output/results.csv \
     --force
 
 # Enable verbose logging
 uv run python -m muka_analysis analyze --verbose
 
+# Show warnings for unclassified farms
+uv run python -m muka_analysis analyze --show-unclassified-warnings
+
+# Combine options
+uv run python -m muka_analysis analyze \
+    --save-analysis \
+    --verbose \
+    --theme light \
+    --force
+
 # Get help for any command
 uv run python -m muka_analysis --help
 uv run python -m muka_analysis analyze --help
 ```
+
+### Analysis Output
+
+The analysis displays results directly in the terminal with:
+- **Classification Results**: Overview of classified vs. unclassified farms
+- **Group Distribution**: Table showing farms per group with percentages
+- **Summary Statistics**: Key metrics (average/median animals, females) per group
+- **Output Files**: Location of saved CSV and Excel files (if created)
+
+Excel files are **only created when requested** using `--save-analysis` or `--excel` flags.
 
 ### Validate CSV Files
 
