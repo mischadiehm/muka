@@ -15,7 +15,8 @@ import typer
 from muka_analysis.analyzer import FarmAnalyzer
 from muka_analysis.classifier import FarmClassifier
 from muka_analysis.io_utils import IOUtils
-from muka_analysis.output import ColorScheme, init_output
+from muka_analysis.models import FarmData
+from muka_analysis.output import ColorScheme, OutputInterface, init_output
 
 # Create Typer app
 app = typer.Typer(
@@ -24,6 +25,198 @@ app = typer.Typer(
     add_completion=False,
     rich_markup_mode="rich",
 )
+
+
+def _show_unclassified_analysis(
+    output: OutputInterface,
+    farms: list[FarmData],
+    classifier: FarmClassifier,
+) -> None:
+    """
+    Show detailed analysis of unclassified farms with clear explanations.
+
+    Args:
+        output: OutputInterface for displaying results
+        farms: List of all farms
+        classifier: FarmClassifier instance with profiles
+    """
+    from typing import Dict, Tuple
+
+    output.section("Unclassified Farms Analysis")
+
+    # Get unclassified farms
+    unclassified_farms = [farm for farm in farms if farm.group is None]
+
+    if not unclassified_farms:
+        output.info("All farms were successfully classified!")
+        return
+
+    output.info(f"Analyzing {len(unclassified_farms):,} unclassified farms...")
+    output.print("")
+
+    # Group unclassified farms by their indicator pattern
+    pattern_groups: Dict[Tuple[int, int, int, int], list[FarmData]] = {}
+    for farm in unclassified_farms:
+        pattern = (
+            farm.indicator_female_dairy_cattle_v2,
+            farm.indicator_female_cattle,
+            farm.indicator_calf_arrivals,
+            farm.indicator_calf_leavings,
+        )
+        if pattern not in pattern_groups:
+            pattern_groups[pattern] = []
+        pattern_groups[pattern].append(farm)
+
+    # Get all defined profiles for comparison
+    defined_profiles = classifier.get_all_profiles()
+
+    # Show pattern analysis
+    output.header("Unclassified Patterns and Explanations")
+    output.print("")
+
+    for pattern, pattern_farms in sorted(
+        pattern_groups.items(), key=lambda x: len(x[1]), reverse=True
+    ):
+        dairy, female, arrivals, leavings = pattern
+
+        # Create explanation
+        output.data(f"📊 Pattern: [Dairy={dairy}, Female={female}, Arrivals={arrivals}, Leavings={leavings}]")
+        output.data(f"   Farms affected: {len(pattern_farms):,}")
+        output.print("")
+
+        # Build human-readable description
+        characteristics = []
+        if dairy == 1:
+            characteristics.append("✓ Has female dairy cattle aged 3+")
+        else:
+            characteristics.append("✗ No female dairy cattle aged 3+")
+
+        if female == 1:
+            characteristics.append("✓ Has other female cattle aged 3+")
+        else:
+            characteristics.append("✗ No other female cattle aged 3+")
+
+        if arrivals == 1:
+            characteristics.append("✓ Has calf arrivals under 85 days")
+        else:
+            characteristics.append("✗ No calf arrivals under 85 days")
+
+        if leavings == 1:
+            characteristics.append("✓ Has non-slaughter leavings under 51 days")
+        else:
+            characteristics.append("✗ No non-slaughter leavings under 51 days")
+
+        output.info("Farm characteristics:")
+        for char in characteristics:
+            output.data(f"   {char}")
+        output.print("")
+
+        # Explain why it doesn't match any profile
+        output.warning("Why this pattern is not classified:")
+
+        # Find closest matching profiles
+        matches_found = []
+        for profile in defined_profiles:
+            differences = []
+            if profile.female_dairy_cattle != dairy:
+                if dairy == 1:
+                    differences.append("has dairy cattle (profile expects none)")
+                else:
+                    differences.append("lacks dairy cattle (profile expects some)")
+
+            if profile.female_cattle != female:
+                if female == 1:
+                    differences.append("has other female cattle (profile expects none)")
+                else:
+                    differences.append("lacks other female cattle (profile expects some)")
+
+            if profile.calf_arrivals != arrivals:
+                if arrivals == 1:
+                    differences.append("has calf arrivals (profile expects none)")
+                else:
+                    differences.append("lacks calf arrivals (profile expects some)")
+
+            if profile.calf_non_slaughter_leavings != leavings:
+                if leavings == 1:
+                    differences.append("has calf leavings (profile expects none)")
+                else:
+                    differences.append("lacks calf leavings (profile expects some)")
+
+            if differences:
+                diff_count = len(differences)
+                matches_found.append((profile.group_name.value, differences, diff_count))
+
+        # Sort by number of differences (closest matches first)
+        matches_found.sort(key=lambda x: x[2])
+
+        if matches_found:
+            closest = matches_found[0]
+            output.data(
+                f"   Closest match would be '{closest[0]}', but this farm:"
+            )
+            for diff in closest[1]:
+                output.data(f"     • {diff}")
+        else:
+            output.data("   No similar classification profiles exist")
+
+        output.print("")
+
+        # Show sample farms
+        sample_size = min(3, len(pattern_farms))
+        if sample_size > 0:
+            output.data(f"   Example farms (showing {sample_size} of {len(pattern_farms):,}):")
+            for farm in pattern_farms[:sample_size]:
+                output.data(
+                    f"     • TVD {farm.tvd}: {farm.n_animals_total} animals, "
+                    f"{farm.n_females_age3_total} females 3+"
+                )
+
+        output.print("")
+        output.print("   " + "─" * 70)
+        output.print("")
+
+    # Summary table
+    output.header("Summary of Unclassified Patterns")
+    pattern_table = output.create_table(
+        "Patterns",
+        [
+            ("Dairy", "data"),
+            ("Female", "data"),
+            ("Arrivals", "data"),
+            ("Leavings", "data"),
+            ("Farms", "highlight"),
+            ("Percentage", "highlight"),
+        ],
+    )
+
+    total_unclassified = len(unclassified_farms)
+    for pattern, pattern_farms in sorted(
+        pattern_groups.items(), key=lambda x: len(x[1]), reverse=True
+    ):
+        percentage = (len(pattern_farms) / total_unclassified * 100) if total_unclassified > 0 else 0
+        pattern_table.add_row(
+            str(pattern[0]),
+            str(pattern[1]),
+            str(pattern[2]),
+            str(pattern[3]),
+            f"{len(pattern_farms):,}",
+            f"{percentage:.1f}%",
+        )
+
+    output.show_table(pattern_table)
+    output.print("")
+
+    # Recommendations
+    output.header("💡 Recommendations")
+    output.info(
+        "To classify these farms, you would need to define new classification profiles "
+        "that match these patterns."
+    )
+    output.info(
+        "Consider whether these patterns represent valid farm types that should have "
+        "their own classifications, or if they are edge cases/data quality issues."
+    )
+    output.print("")
 
 
 @app.command()
@@ -84,6 +277,13 @@ def analyze(
         typer.Option(
             "--show-unclassified-warnings",
             help="Show warnings for farms that could not be classified",
+        ),
+    ] = False,
+    show_unclassified_analysis: Annotated[
+        bool,
+        typer.Option(
+            "--show-unclassified",
+            help="Show detailed analysis of unclassified farms with explanations",
         ),
     ] = False,
     theme: Annotated[
@@ -273,6 +473,18 @@ def analyze(
             output.warning("No farms were successfully classified.")
             output.info(
                 "All farms have patterns that don't match any defined classification profile."
+            )
+            output.print("")
+
+        # Show unclassified farm analysis if requested
+        if show_unclassified_analysis and unclassified_count > 0:
+            _show_unclassified_analysis(output, farms, classifier)
+        elif unclassified_count > 0 and not show_unclassified_analysis:
+            # Hint to user about the --show-unclassified flag
+            output.print("")
+            output.info(
+                f"💡 Tip: Use [bold]--show-unclassified[/bold] flag to see detailed analysis "
+                f"of why {unclassified_count:,} farms were not classified."
             )
             output.print("")
 

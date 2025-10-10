@@ -39,6 +39,9 @@ uv run python -m muka_analysis analyze --verbose
 # Show warnings for unclassified farms
 uv run python -m muka_analysis analyze --show-unclassified-warnings
 
+# Show detailed analysis of why farms were not classified
+uv run python -m muka_analysis analyze --show-unclassified
+
 # Combine options
 uv run python -m muka_analysis analyze \
     --save-analysis \
@@ -54,12 +57,52 @@ uv run python -m muka_analysis analyze --help
 ### Analysis Output
 
 The analysis displays results directly in the terminal with:
+
 - **Classification Results**: Overview of classified vs. unclassified farms
 - **Group Distribution**: Table showing farms per group with percentages
 - **Summary Statistics**: Key metrics (average/median animals, females) per group
 - **Output Files**: Location of saved CSV and Excel files (if created)
 
 Excel files are **only created when requested** using `--save-analysis` or `--excel` flags.
+
+### Understanding Unclassified Farms
+
+When farms cannot be classified, use the `--show-unclassified` flag to see detailed explanations:
+
+```bash
+uv run python -m muka_analysis analyze --show-unclassified
+```
+
+This provides:
+
+- **Pattern Analysis**: Groups unclassified farms by their indicator patterns
+- **Farm Characteristics**: Clear breakdown of what each farm has/doesn't have
+- **Closest Matches**: Shows which classification profile is closest and why it doesn't match
+- **Example Farms**: Sample farm IDs and their key metrics for each pattern
+- **Summary Table**: Overview of all unclassified patterns with counts and percentages
+- **Recommendations**: Suggestions for whether new profiles should be defined
+
+**Example Output:**
+
+```
+📊 Pattern: [Dairy=0, Female=0, Arrivals=0, Leavings=1]
+   Farms affected: 3,018
+
+ℹ️  Farm characteristics:
+   ✗ No female dairy cattle aged 3+
+   ✗ No other female cattle aged 3+
+   ✗ No calf arrivals under 85 days
+   ✓ Has non-slaughter leavings under 51 days
+
+⚠️  Why this pattern is not classified:
+   Closest match would be 'Muku', but this farm:
+     • has calf leavings (profile expects none)
+```
+
+This helps you understand whether unclassified farms represent:
+- New valid farm types that need classification profiles
+- Edge cases or transitional farm operations
+- Potential data quality issues
 
 ### Validate CSV Files
 
