@@ -8,6 +8,7 @@ based on their cattle type and movement patterns.
 import logging
 from typing import List, Optional
 
+from muka_analysis.config import get_config
 from muka_analysis.models import FarmData, FarmGroup, GroupProfile
 
 logger = logging.getLogger(__name__)
@@ -150,13 +151,24 @@ class FarmClassifier:
                 )
                 return profile.group_name
 
-        logger.warning(
-            f"Farm {farm.tvd} could not be classified. Pattern: "
-            f"[{farm.indicator_female_dairy_cattle_v2}, "
-            f"{farm.indicator_female_cattle}, "
-            f"{farm.indicator_calf_arrivals}, "
-            f"{farm.indicator_calf_leavings}]"
-        )
+        # Only show warning if enabled in configuration
+        config = get_config()
+        if config.classification.show_unclassified_warnings:
+            logger.warning(
+                f"Farm {farm.tvd} could not be classified. Pattern: "
+                f"[{farm.indicator_female_dairy_cattle_v2}, "
+                f"{farm.indicator_female_cattle}, "
+                f"{farm.indicator_calf_arrivals}, "
+                f"{farm.indicator_calf_leavings}]"
+            )
+        else:
+            logger.debug(
+                f"Farm {farm.tvd} could not be classified. Pattern: "
+                f"[{farm.indicator_female_dairy_cattle_v2}, "
+                f"{farm.indicator_female_cattle}, "
+                f"{farm.indicator_calf_arrivals}, "
+                f"{farm.indicator_calf_leavings}]"
+            )
         return None
 
     def classify_farms(self, farms: List[FarmData]) -> List[FarmData]:

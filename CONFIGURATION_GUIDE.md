@@ -161,10 +161,13 @@ config.paths.get_summary_output_path()      # Full path to summary output
 Farm classification parameters:
 
 ```python
-config.classification.presence_threshold        # Binary threshold (>0 = present)
-config.classification.require_all_fields        # Require all fields present
-config.classification.allow_missing_values      # Allow missing values
+config.classification.presence_threshold            # Binary threshold (>0 = present)
+config.classification.require_all_fields            # Require all fields present
+config.classification.allow_missing_values          # Allow missing values
+config.classification.show_unclassified_warnings    # Show warnings for unclassified farms (default: False)
 ```
+
+**Note:** By default, warnings for unclassified farms are hidden. Enable with `--show-unclassified-warnings` flag or set `MUKA_CLASSIFICATION__SHOW_UNCLASSIFIED_WARNINGS=true`.
 
 ### Analysis Configuration
 

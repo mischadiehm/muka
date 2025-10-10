@@ -43,6 +43,9 @@ uv run python -m muka_analysis analyze --theme light
 # Enable verbose logging
 uv run python -m muka_analysis analyze --verbose
 
+# Show warnings for farms that couldn't be classified
+uv run python -m muka_analysis analyze --show-unclassified-warnings
+
 # Validate data before analysis
 uv run python -m muka_analysis validate csv/your_data.csv
 

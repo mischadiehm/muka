@@ -33,6 +33,7 @@ summary_output_file = "analysis_summary.xlsx"
 presence_threshold = 0.0        # Threshold for binary classification (>0 = present)
 require_all_fields = true       # Require all fields in input data
 allow_missing_values = false    # Allow missing values in non-critical fields
+show_unclassified_warnings = false  # Show warnings for unclassified farms (default: false)
 
 [analysis]
 # Statistical analysis parameters

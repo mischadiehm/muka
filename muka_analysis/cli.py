@@ -72,6 +72,13 @@ def analyze(
             help="Overwrite existing output files without prompting",
         ),
     ] = False,
+    show_unclassified_warnings: Annotated[
+        bool,
+        typer.Option(
+            "--show-unclassified-warnings",
+            help="Show warnings for farms that could not be classified",
+        ),
+    ] = False,
     theme: Annotated[
         ColorScheme,
         typer.Option(
@@ -96,6 +103,12 @@ def analyze(
     # Initialize output interface
     output = init_output(color_scheme=theme, verbose=verbose)
     logger = logging.getLogger(__name__)
+    
+    # Update configuration with CLI parameter if provided
+    from muka_analysis.config import get_config
+    config = get_config()
+    if show_unclassified_warnings:
+        config.classification.show_unclassified_warnings = True
     
     output.section("MuKa Farm Classification & Analysis")
     
