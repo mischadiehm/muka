@@ -6,17 +6,53 @@
 
 ```bash
 cd /home/mischa/git/i/muka
-uv venv
-uv pip install -e .
+uv sync  # Installs all dependencies automatically
 ```
 
-### Running the Analysis
+### Running the Analysis - Modern CLI
+
+The tool now features a modern CLI with Rich console output and Typer interface:
 
 ```bash
-# Use default input/output paths
-uv run python -m muka_analysis.main
+# Basic analysis with default paths
+uv run python -m muka_analysis analyze
 
-# Or specify custom paths
+# Specify custom input/output paths
+uv run python -m muka_analysis analyze \
+    --input csv/your_data.csv \
+    --output output/results.csv \
+    --excel output/summary.xlsx
+
+# Force overwrite existing files
+uv run python -m muka_analysis analyze \
+    --input csv/your_data.csv \
+    --output output/results.csv \
+    --force
+
+# Enable verbose logging
+uv run python -m muka_analysis analyze --verbose
+
+# Get help for any command
+uv run python -m muka_analysis --help
+uv run python -m muka_analysis analyze --help
+```
+
+### Validate CSV Files
+
+Validate your data without running the full analysis:
+
+```bash
+# Validate input file
+uv run python -m muka_analysis validate csv/your_data.csv
+
+# Validate with verbose output
+uv run python -m muka_analysis validate csv/your_data.csv --verbose
+```
+
+### Legacy Interface (for backward compatibility)
+
+```bash
+# Use the legacy main.py interface
 uv run python -m muka_analysis.main \
     --input csv/your_data.csv \
     --output output/results.csv \

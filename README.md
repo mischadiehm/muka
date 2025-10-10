@@ -2,17 +2,42 @@
 
 A Python package for classifying and analyzing farm data based on cattle types and movements.
 
-## Installation
+## Features
+
+- 🎨 **Modern CLI** with Rich console output and progress bars
+- 🔧 **Type-safe** data validation with Pydantic v2
+- 📊 **Comprehensive analysis** with Excel and CSV export
+- 🚀 **Fast execution** with uv package management
+- 📋 **Data validation** commands to check file quality
+- 🎯 **Six farm group classifications** based on binary indicators
+
+## Quick Start
+
+### Installation
 
 ```bash
-uv pip install -e .
+git clone <repository>
+cd muka
+uv sync  # Installs all dependencies automatically
 ```
 
-## Usage
+### Basic Usage
 
 ```bash
-cd /home/mischa/git/i/muka
-uv run python -m muka_analysis.main
+# Analyze with default settings
+uv run python -m muka_analysis analyze
+
+# Specify custom files
+uv run python -m muka_analysis analyze \
+    --input csv/your_data.csv \
+    --output output/results.csv \
+    --excel output/summary.xlsx
+
+# Validate data before analysis
+uv run python -m muka_analysis validate csv/your_data.csv
+
+# Get help
+uv run python -m muka_analysis --help
 ```
 
 ## Project Structure

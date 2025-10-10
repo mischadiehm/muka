@@ -3,6 +3,12 @@ MuKa Farm Classification and Analysis Package.
 
 This package provides tools for classifying farms based on cattle types and movements,
 and performing statistical analysis on the classified data.
+
+Features:
+- Modern CLI with Rich console output and Typer interface
+- Pydantic v2 models for robust data validation
+- Comprehensive error handling and logging
+- Export capabilities to CSV and Excel formats
 """
 
 from muka_analysis.analyzer import FarmAnalyzer
@@ -20,3 +26,12 @@ __all__ = [
     "DataValidator",
     "FarmClassifier",
 ]
+
+# Import CLI for easy access
+try:
+    from muka_analysis.cli import app as cli_app
+
+    __all__.append("cli_app")
+except ImportError:
+    # CLI dependencies not available
+    pass

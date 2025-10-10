@@ -44,13 +44,16 @@ This is a research project that processes CSV files for scientific/analytical pu
 - **TEST** edge cases (empty files, single row, missing columns, etc.)
 
 ### 4. Code Structure
-- **USE** Pydantic BaseModel for all data structures
+- **USE** Pydantic v2 BaseModel for all data structures (with Field, model_validate, model_dump)
 - **IMPLEMENT** proper separation of concerns:
-  - Models: Data structure definitions with Pydantic
+  - Models: Data structure definitions with Pydantic v2
   - Validators: Input validation logic
   - Processors: Business logic and calculations
   - Utils: File I/O and helper functions
+  - CLI: Modern command-line interface with Typer and Rich
 - **CREATE** unit tests for every function that processes data
+- **USE** Rich for all console output (tables, progress bars, error messages)
+- **USE** Typer for CLI commands with proper type hints and documentation
 - **DOCUMENT** all functions with docstrings including:
   - Parameters with types
   - Return values with types
@@ -61,8 +64,10 @@ This is a research project that processes CSV files for scientific/analytical pu
 - **PREFER** standard library when possible
 - **USE** established libraries:
   - pandas for data processing
-  - pydantic for data validation
-  - numpy for numerical operations (when needed)
+  - pydantic v2 for data validation (BaseModel, Field, model_validate, model_dump)
+  - numpy for numerical operations (when needed)  
+  - rich for console output, tables, progress bars, and error display
+  - typer for CLI interface with type hints and automatic help generation
   - pytest for testing
 - **AVOID** unnecessary dependencies
 
@@ -88,13 +93,47 @@ This is a research project that processes CSV files for scientific/analytical pu
 - **EXPLAIN** complex calculations with inline comments
 - **DOCUMENT** assumptions explicitly when unavoidable
 
-## Example Code Template
+### 9. Rich and Typer Integration Best Practices
 
+#### Rich Console Output
+- **USE** Rich for ALL console output instead of plain print statements
+- **IMPLEMENT** proper color coding and formatting:
+  - `[green]` for success messages
+  - `[red]` for errors and failures
+  - `[yellow]` for warnings
+  - `[blue]` for informational headers
+  - `[cyan]` for data/metrics
+- **CREATE** Rich tables for data presentation with proper column styling
+- **USE** Rich progress bars for long-running operations
+- **ENABLE** Rich tracebacks for better error debugging
+
+#### Typer CLI Design
+- **USE** Typer for all CLI interfaces with proper type annotations
+- **IMPLEMENT** command groups for different functionalities
+- **PROVIDE** comprehensive help text and examples
+- **USE** `Annotated` types for parameter documentation
+- **VALIDATE** file paths with Typer's built-in path validation
+- **IMPLEMENT** confirmation prompts for destructive operations
+
+#### CLI Command Structure
+```python
+@app.command()
+def command_name(
+    required_param: Annotated[Path, typer.Argument(help="Description")],
+    optional_param: Annotated[Optional[str], typer.Option("--flag", help="Description")] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+) -> None:
+    """Command description with examples."""
+```
+
+## Example Code Templates
+
+### Pydantic v2 Model Template
 ```python
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import pandas as pd
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel, Field, field_validator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -103,13 +142,93 @@ class DataRecord(BaseModel):
     """Validated data record from CSV."""
     field_name: str = Field(..., description="Description of field")
     
-    @validator('field_name')
+    @field_validator('field_name')
+    @classmethod
     def validate_field_name(cls, v: str) -> str:
         """Validate field_name meets requirements."""
         if not v:
             raise ValueError("field_name cannot be empty")
         return v
+```
 
+### Rich Console Output Template
+```python
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+console = Console()
+
+def display_results(data: List[Dict[str, Any]]) -> None:
+    """Display results in a formatted table."""
+    table = Table(title="Results", show_header=True, header_style="bold magenta")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    
+    for item in data:
+        table.add_row(item["metric"], str(item["value"]))
+    
+    console.print(table)
+
+def process_with_progress() -> None:
+    """Process data with progress indicator."""
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Processing...", total=None)
+        # Do work here
+        progress.update(task, description="✓ Complete")
+```
+
+### Typer CLI Template
+```python
+import typer
+from typing import Annotated, Optional
+from pathlib import Path
+from rich.console import Console
+
+console = Console()
+
+app = typer.Typer(
+    name="tool-name",
+    help="Tool description",
+    rich_markup_mode="rich",
+)
+
+@app.command()
+def process(
+    input_file: Annotated[
+        Path,
+        typer.Argument(help="Input CSV file path", exists=True, readable=True)
+    ],
+    output_file: Annotated[
+        Optional[Path],
+        typer.Option("--output", "-o", help="Output file path")
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output")
+    ] = False,
+) -> None:
+    """
+    Process data with comprehensive validation.
+    
+    Example:
+        [bold]tool-name process data.csv --output results.csv[/bold]
+    """
+    try:
+        console.print(f"[blue]Processing: {input_file}[/blue]")
+        # Process data here
+        console.print("[green]✅ Processing completed![/green]")
+    except Exception as e:
+        console.print(f"[red]❌ Error: {e}[/red]")
+        raise typer.Exit(1)
+```
+
+### Error Handling Template
+```python
 def process_csv(file_path: Path) -> pd.DataFrame:
     """
     Process CSV file with validation.
