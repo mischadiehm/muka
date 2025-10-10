@@ -668,6 +668,8 @@ async def handle_get_farm_details(arguments: Dict[str, Any]) -> Dict[str, Any]:
             "female_cattle": farm.indicator_female_cattle,
             "calf_arrivals": farm.indicator_calf_arrivals,
             "calf_leavings": farm.indicator_calf_leavings,
+            "female_slaughterings": farm.indicator_female_slaughterings,
+            "young_slaughterings": farm.indicator_young_slaughterings,
         },
         "animal_counts": {
             "n_animals_total": farm.n_animals_total,
