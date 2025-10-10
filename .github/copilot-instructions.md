@@ -93,37 +93,84 @@ This is a research project that processes CSV files for scientific/analytical pu
 - **EXPLAIN** complex calculations with inline comments
 - **DOCUMENT** assumptions explicitly when unavoidable
 
-### 9. Rich and Typer Integration Best Practices
+### 9. Output Interface Best Practices
 
-#### Rich Console Output
-- **USE** Rich for ALL console output instead of plain print statements
-- **IMPLEMENT** proper color coding and formatting:
-  - `[green]` for success messages
-  - `[red]` for errors and failures
-  - `[yellow]` for warnings
-  - `[blue]` for informational headers
-  - `[cyan]` for data/metrics
-- **CREATE** Rich tables for data presentation with proper column styling
-- **USE** Rich progress bars for long-running operations
-- **ENABLE** Rich tracebacks for better error debugging
+#### Centralized Output Management
+- **ALWAYS** use `OutputInterface` for ALL console output, logging, and user interactions
+- **NEVER** use `print()`, `console.print()`, or direct Rich calls
+- **INITIALIZE** output interface at application start with theme and verbosity settings
+- **ACCESS** via `get_output()` or pass as parameter to functions
 
-#### Typer CLI Design
+#### Output Interface Usage
+```python
+from muka_analysis.output import init_output, ColorScheme
+
+# Initialize with theme
+output = init_output(color_scheme=ColorScheme.DARK, verbose=False)
+
+# Success/error/warning/info messages
+output.success("Operation completed!")
+output.error("Something went wrong")
+output.warning("Please review this")
+output.info("Processing data...")
+
+# User interaction
+if output.confirm("Continue with operation?"):
+    value = output.prompt("Enter value:", default="100")
+
+# Display data
+output.show_summary("Results", {"Total": 100, "Success": 95})
+
+# Progress tracking
+with output.simple_progress() as progress:
+    task = progress.add_task("Processing...", total=None)
+    # Do work
+    progress.update(task, description="✓ Complete")
+
+# Section headers
+output.section("Data Analysis")
+```
+
+#### Theme and Color Management
+- **USE** centralized color scheme definitions (dark/light/auto)
+- **SUPPORT** theme switching via CLI flag `--theme dark|light|auto`
+- **DEFINE** colors in `ThemeColors` model, not inline
+- **ALLOW** easy theme extension for custom color schemes
+
+#### Logging Through Output Interface
+- **CONFIGURE** logging automatically via `OutputInterface`
+- **USE** standard Python logging (logger.info, logger.error, etc.)
+- **OUTPUT** logs through Rich handler with consistent styling
+- **FILE** logging configured automatically alongside console
+
+#### Rich and Typer Integration
 - **USE** Typer for all CLI interfaces with proper type annotations
 - **IMPLEMENT** command groups for different functionalities
 - **PROVIDE** comprehensive help text and examples
 - **USE** `Annotated` types for parameter documentation
 - **VALIDATE** file paths with Typer's built-in path validation
-- **IMPLEMENT** confirmation prompts for destructive operations
+- **IMPLEMENT** confirmation prompts via OutputInterface
 
-#### CLI Command Structure
+#### CLI Command Structure with Output Interface
 ```python
 @app.command()
 def command_name(
     required_param: Annotated[Path, typer.Argument(help="Description")],
-    optional_param: Annotated[Optional[str], typer.Option("--flag", help="Description")] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+    theme: Annotated[ColorScheme, typer.Option("--theme", "-t")] = ColorScheme.DARK,
 ) -> None:
     """Command description with examples."""
+    output = init_output(color_scheme=theme, verbose=verbose)
+    logger = logging.getLogger(__name__)
+    
+    try:
+        output.section("Operation Name")
+        # Do work
+        output.success("Completed!")
+    except Exception as e:
+        logger.error(f"Failed: {e}", exc_info=True)
+        output.error(f"Operation failed: {e}")
+        raise typer.Exit(1)
 ```
 
 ## Example Code Templates
@@ -151,45 +198,65 @@ class DataRecord(BaseModel):
         return v
 ```
 
-### Rich Console Output Template
+### Output Interface Usage Template
 ```python
-from rich.console import Console
-from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from typing import List, Dict, Any
+from pathlib import Path
+from muka_analysis.output import OutputInterface, ColorScheme, init_output
+import logging
 
-console = Console()
+logger = logging.getLogger(__name__)
 
-def display_results(data: List[Dict[str, Any]]) -> None:
-    """Display results in a formatted table."""
-    table = Table(title="Results", show_header=True, header_style="bold magenta")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="green")
+def display_results(output: OutputInterface, data: List[Dict[str, Any]]) -> None:
+    """Display results using output interface."""
+    # Create custom table
+    table = output.create_table(
+        "Results",
+        [("Metric", "data"), ("Value", "highlight")]
+    )
     
     for item in data:
         table.add_row(item["metric"], str(item["value"]))
     
-    console.print(table)
+    output.show_table(table)
+    
+    # Or use built-in summary
+    summary_dict = {item["metric"]: item["value"] for item in data}
+    output.show_summary("Results", summary_dict)
 
-def process_with_progress() -> None:
+def process_with_progress(output: OutputInterface) -> None:
     """Process data with progress indicator."""
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
+    with output.simple_progress() as progress:
         task = progress.add_task("Processing...", total=None)
         # Do work here
         progress.update(task, description="✓ Complete")
+    
+    output.success("Processing completed!")
+
+def interactive_operation(output: OutputInterface) -> None:
+    """Perform operation with user confirmation."""
+    output.section("Data Processing")
+    
+    if output.confirm("Start processing?"):
+        with output.simple_progress() as progress:
+            task = progress.add_task("Working...", total=None)
+            # Process data
+            progress.update(task, description="✓ Done")
+        
+        output.success("Operation completed!")
+    else:
+        output.warning("Operation cancelled by user")
 ```
 
-### Typer CLI Template
+### Typer CLI with Output Interface Template
 ```python
 import typer
+import logging
 from typing import Annotated, Optional
 from pathlib import Path
-from rich.console import Console
+from muka_analysis.output import init_output, ColorScheme
 
-console = Console()
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="tool-name",
@@ -211,19 +278,42 @@ def process(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output")
     ] = False,
+    theme: Annotated[
+        ColorScheme,
+        typer.Option("--theme", "-t", help="Color scheme: dark, light, or auto")
+    ] = ColorScheme.DARK,
 ) -> None:
     """
     Process data with comprehensive validation.
     
     Example:
-        [bold]tool-name process data.csv --output results.csv[/bold]
+        [bold]tool-name process data.csv --output results.csv --theme dark[/bold]
     """
+    # Initialize output interface with theme
+    output = init_output(color_scheme=theme, verbose=verbose)
+    
     try:
-        console.print(f"[blue]Processing: {input_file}[/blue]")
+        output.section("Data Processing")
+        output.info(f"Processing: {input_file}")
+        
         # Process data here
-        console.print("[green]✅ Processing completed![/green]")
+        with output.simple_progress() as progress:
+            task = progress.add_task("Processing...", total=None)
+            # Do work
+            progress.update(task, description="✓ Complete")
+        
+        output.success("Processing completed!")
+        
+        # Show summary
+        output.show_summary("Results", {
+            "Input": str(input_file),
+            "Output": str(output_file),
+            "Status": "Success"
+        })
+        
     except Exception as e:
-        console.print(f"[red]❌ Error: {e}[/red]")
+        logger.error(f"Processing failed: {e}", exc_info=True)
+        output.error(f"Error: {e}")
         raise typer.Exit(1)
 ```
 

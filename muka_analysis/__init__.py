@@ -14,6 +14,7 @@ Features:
 from muka_analysis.analyzer import FarmAnalyzer
 from muka_analysis.classifier import FarmClassifier
 from muka_analysis.models import FarmData, FarmGroup, GroupProfile
+from muka_analysis.output import ColorScheme, OutputInterface, get_output, init_output
 from muka_analysis.validators import DataValidator
 
 __version__ = "0.1.0"
@@ -25,6 +26,10 @@ __all__ = [
     "FarmAnalyzer",
     "DataValidator",
     "FarmClassifier",
+    "OutputInterface",
+    "ColorScheme",
+    "get_output",
+    "init_output",
 ]
 
 # Import CLI for easy access
