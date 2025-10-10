@@ -13,9 +13,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+import pandas as pd
+
 from muka_analysis.analyzer import FarmAnalyzer
 from muka_analysis.classifier import FarmClassifier
 from muka_analysis.io_utils import IOUtils
+from muka_analysis.validation import ValidationSuite, create_validation_report
 
 # Configure logging
 logging.basicConfig(
@@ -99,23 +102,50 @@ def main(
         logger.info(f"  Classified: {classified_count}")
         logger.info(f"  Unclassified: {unclassified_count}")
 
-        # Step 3: Analyze results
-        logger.info("\nStep 3: Analyzing results...")
+        # Step 3: Validate results against reference data
+        logger.info("\nStep 3: Validating results against reference data...")
+        validation_suite = ValidationSuite()
+
+        # Read the raw dataframe to get the reference 'group' column
+        raw_df = IOUtils.read_csv(input_file, validate=False)
+
+        # Analyze reference groups
+        reference_groups = validation_suite.analyze_reference_groups(raw_df)
+        logger.info("Reference group distribution:")
+        for group_name, count in sorted(reference_groups.items()):
+            logger.info(f"  {group_name}: {count}")
+
+        # Run validation
+        validation_results = validation_suite.run_all_validations(classified_farms, raw_df)
+
+        # Log validation results
+        logger.info("\nValidation Results:")
+        for result in validation_results:
+            logger.info(f"\n{result.message}")
+
+        # Step 4: Analyze results
+        logger.info("\nStep 4: Analyzing results...")
         analyzer = FarmAnalyzer(classified_farms)
 
         # Print summary to console
         analyzer.print_summary()
 
-        # Step 4: Save results
-        logger.info("\nStep 4: Saving results...")
+        # Step 5: Save results
+        logger.info("\nStep 5: Saving results...")
 
         # Save classified farms to CSV
         IOUtils.write_results(classified_farms, output_file)
         logger.info(f"Saved classified farms to: {output_file}")
 
-        # Save analysis summary to Excel
+        # Save analysis summary to Excel (including validation report)
         analyzer.export_summary_to_excel(str(excel_file))
         logger.info(f"Saved analysis summary to: {excel_file}")
+
+        # Add validation report to Excel
+        validation_report_df = create_validation_report(validation_results)
+        with pd.ExcelWriter(excel_file, mode="a", engine="openpyxl") as writer:
+            validation_report_df.to_excel(writer, sheet_name="Validation", index=False)
+        logger.info(f"Added validation report to: {excel_file}")
 
         logger.info("\n" + "=" * 70)
         logger.info("Analysis complete!")

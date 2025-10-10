@@ -3,6 +3,19 @@
 ## Project Context
 This is a research project that processes CSV files for scientific/analytical purposes. **Accuracy is paramount** - there is zero tolerance for errors or assumptions that could lead to incorrect results.
 
+## CRITICAL: Environment Setup
+- **THIS PROJECT USES UV FOR PACKAGE MANAGEMENT**
+- **ALWAYS** run Python commands with `uv run python` prefix
+- **NEVER** use plain `python` or `/bin/python3` directly
+- **EXAMPLES:**
+  - ✅ `uv run python -m muka_analysis.main`
+  - ✅ `uv run python script.py`
+  - ✅ `uv run pytest`
+  - ❌ `python -m muka_analysis.main`
+  - ❌ `/bin/python3 script.py`
+- **PACKAGE INSTALLATION:** Use `uv add <package>` not `pip install`
+- **REMEMBER:** uv manages the virtual environment automatically
+
 ## Core Requirements
 
 ### 1. Code Quality Standards
