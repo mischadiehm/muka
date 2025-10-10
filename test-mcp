@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Quick launcher for MCP interactive client
+
+echo "🐄 Starting MuKa MCP Interactive Client..."
+uv run python interactive_mcp_client.py

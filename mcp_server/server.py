@@ -30,14 +30,22 @@ class DataContext:
     and analysis results throughout the MCP session.
     """
 
-    def __init__(self) -> None:
-        """Initialize empty data context."""
+    def __init__(self, auto_load: bool = False) -> None:
+        """
+        Initialize data context.
+
+        Args:
+            auto_load: If True, automatically load and classify data on init
+        """
         self.raw_df: Optional[pd.DataFrame] = None
         self.farms: Optional[List[FarmData]] = None
         self.analyzer: Optional[FarmAnalyzer] = None
         self.classifier: Optional[FarmClassifier] = None
         self.data_loaded: bool = False
         self.classified: bool = False
+
+        if auto_load:
+            self._auto_load_data()
 
     def load_data(self, file_path: Optional[Path] = None) -> Dict[str, Any]:
         """
@@ -117,6 +125,52 @@ class DataContext:
                 "error": str(e),
             }
 
+    def _auto_load_data(self) -> None:
+        """
+        Automatically load all CSV files from the configured directory.
+
+        This method is called during initialization if auto_load is True.
+        It loads the first CSV file found in the csv directory and classifies farms.
+        """
+        try:
+            config = get_config()
+            csv_dir = config.paths.csv_dir
+
+            # Find all CSV files in the directory
+            csv_files = list(csv_dir.glob("*.csv"))
+
+            if not csv_files:
+                logger.warning(f"No CSV files found in {csv_dir}")
+                return
+
+            # Load the first CSV file (or combine all if multiple)
+            if len(csv_files) == 1:
+                logger.info(f"Auto-loading data from {csv_files[0]}")
+                result = self.load_data(csv_files[0])
+            else:
+                # If multiple CSV files, load the first one
+                # (you could enhance this to combine multiple files)
+                logger.info(f"Found {len(csv_files)} CSV files, loading {csv_files[0]}")
+                result = self.load_data(csv_files[0])
+
+            if result.get("success"):
+                logger.info(f"Successfully loaded {result.get('rows')} rows")
+
+                # Automatically classify farms after loading
+                classify_result = self.classify_farms()
+                if classify_result.get("success"):
+                    logger.info(
+                        f"Successfully classified {classify_result.get('total_farms')} farms "
+                        f"into {len(classify_result.get('group_counts', {}))} groups"
+                    )
+                else:
+                    logger.error(f"Auto-classification failed: {classify_result.get('error')}")
+            else:
+                logger.error(f"Auto-load failed: {result.get('error')}")
+
+        except Exception as e:
+            logger.error(f"Auto-load data failed: {e}", exc_info=True)
+
     def get_data_summary(self) -> Dict[str, Any]:
         """Get summary of current data state."""
         if not self.data_loaded:
@@ -142,8 +196,8 @@ class DataContext:
 # Initialize MCP server
 server = Server("muka-analysis")
 
-# Global data context
-data_context = DataContext()
+# Global data context - will be initialized with auto-load in main()
+data_context = DataContext(auto_load=False)
 
 
 @server.list_tools()
@@ -886,7 +940,7 @@ async def handle_export(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 def main() -> None:
     """Run the MCP server."""
-    # Initialize configuration
+    # Initialize configuration first
     init_config()
 
     # Setup logging
@@ -896,6 +950,15 @@ def main() -> None:
     )
 
     logger.info("Starting MuKa Analysis MCP Server...")
+
+    # Auto-load data from CSV directory
+    logger.info("Auto-loading farm data from CSV directory...")
+    data_context._auto_load_data()
+
+    if data_context.data_loaded:
+        logger.info("✓ Data loaded and classified, ready for queries!")
+    else:
+        logger.warning("⚠ No data loaded - server starting without data")
 
     # Run the server
     import asyncio

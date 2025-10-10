@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Setup script for enhanced MCP client with tab completion
+
+echo "🔧 Setting up enhanced MCP client..."
+echo ""
+
+# Check if uv is available
+if ! command -v uv &> /dev/null; then
+    echo "❌ Error: uv package manager not found"
+    echo "Please install uv first: https://github.com/astral-sh/uv"
+    exit 1
+fi
+
+echo "📦 Installing prompt_toolkit for tab completion..."
+uv add prompt_toolkit
+
+if [ $? -eq 0 ]; then
+    echo "✅ prompt_toolkit installed successfully!"
+    echo ""
+    echo "🎉 Setup complete! You can now run:"
+    echo "   ./test-mcp"
+    echo ""
+    echo "Features enabled:"
+    echo "  ✓ Tab completion for commands"
+    echo "  ✓ Command history (up/down arrows)"
+    echo "  ✓ Parameter completion"
+    echo "  ✓ In-line editing (Ctrl+A, Ctrl+E, etc.)"
+else
+    echo "⚠️  Failed to install prompt_toolkit"
+    echo "The client will still work but without tab completion"
+fi
