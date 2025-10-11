@@ -251,211 +251,245 @@ class MCPClient:
 
     def show_examples(self) -> None:
         """Display comprehensive examples for all MCP tools."""
-        console.print("\n[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]")
-        console.print("[bold cyan]           🐄 MuKa Farm Data Analysis - Examples              [/bold cyan]")
-        console.print("[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]\n")
+        console.print(
+            "\n[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]"
+        )
+        console.print(
+            "[bold cyan]           🐄 MuKa Farm Data Analysis - Examples              [/bold cyan]"
+        )
+        console.print(
+            "[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]\n"
+        )
 
         # 1. Data Loading & Status
-        console.print(Panel(
-            "[bold yellow]1. Data Loading & Status Commands[/bold yellow]\n\n"
-            "[cyan]info[/cyan]\n"
-            "  → Show current data status (loaded, classified, counts)\n"
-            "  → Automatically run at startup\n\n"
-            "[cyan]load[/cyan]\n"
-            "  → Reload data from CSV (usually not needed - auto-loaded)\n"
-            "  → Example: load\n\n"
-            "[cyan]classify[/cyan]\n"
-            "  → Re-run classification (usually not needed - auto-classified)\n"
-            "  → Example: classify",
-            title="💾 Data Management",
-            border_style="yellow"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]1. Data Loading & Status Commands[/bold yellow]\n\n"
+                "[cyan]info[/cyan]\n"
+                "  → Show current data status (loaded, classified, counts)\n"
+                "  → Automatically run at startup\n\n"
+                "[cyan]load[/cyan]\n"
+                "  → Reload data from CSV (usually not needed - auto-loaded)\n"
+                "  → Example: load\n\n"
+                "[cyan]classify[/cyan]\n"
+                "  → Re-run classification (usually not needed - auto-classified)\n"
+                "  → Example: classify",
+                title="💾 Data Management",
+                border_style="yellow",
+            )
+        )
 
         # 2. Querying Farms
-        console.print(Panel(
-            "[bold yellow]2. Query Farms with Filters[/bold yellow]\n\n"
-            "[cyan]query[/cyan] - Filter farms by various criteria\n\n"
-            "[green]Example 1:[/green] All Muku farms\n"
-            "  → query group=Muku\n\n"
-            "[green]Example 2:[/green] Large dairy farms (>100 animals)\n"
-            "  → query group=Milchvieh min_animals=100\n\n"
-            "[green]Example 3:[/green] Medium-sized farms (50-100 animals)\n"
-            "  → query min_animals=50 max_animals=100\n\n"
-            "[green]Example 4:[/green] Specific farm by TVD ID\n"
-            "  → query tvd=123456\n\n"
-            "[green]Example 5:[/green] Farms from specific year\n"
-            "  → query year=2024\n\n"
-            "[dim]Available groups: Muku, Muku_Amme, Milchvieh, BKMmZ, BKMoZ, IKM[/dim]",
-            title="🔍 Query & Filter",
-            border_style="green"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]2. Query Farms with Filters[/bold yellow]\n\n"
+                "[cyan]query[/cyan] - Filter farms by various criteria\n\n"
+                "[green]Example 1:[/green] All Muku farms\n"
+                "  → query group=Muku\n\n"
+                "[green]Example 2:[/green] Large dairy farms (>100 animals)\n"
+                "  → query group=Milchvieh min_animals=100\n\n"
+                "[green]Example 3:[/green] Medium-sized farms (50-100 animals)\n"
+                "  → query min_animals=50 max_animals=100\n\n"
+                "[green]Example 4:[/green] Specific farm by TVD ID\n"
+                "  → query tvd=123456\n\n"
+                "[green]Example 5:[/green] Farms from specific year\n"
+                "  → query year=2024\n\n"
+                "[dim]Available groups: Muku, Muku_Amme, Milchvieh, BKMmZ, BKMoZ, IKM[/dim]",
+                title="🔍 Query & Filter",
+                border_style="green",
+            )
+        )
 
         # 3. Farm Details
-        console.print(Panel(
-            "[bold yellow]3. Get Detailed Farm Information[/bold yellow]\n\n"
-            "[cyan]farm tvd=<TVD_ID>[/cyan]\n\n"
-            "[green]Example:[/green] Full details for a specific farm\n"
-            "  → farm tvd=123456\n\n"
-            "[dim]Returns:[/dim]\n"
-            "  • Classification indicators\n"
-            "  • Animal counts (total, dairy, calves, etc.)\n"
-            "  • Calf movements (arrivals, leavings)\n"
-            "  • Proportions and derived metrics\n"
-            "  • Group assignment",
-            title="🏢 Farm Details",
-            border_style="blue"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]3. Get Detailed Farm Information[/bold yellow]\n\n"
+                "[cyan]farm tvd=<TVD_ID>[/cyan]\n\n"
+                "[green]Example:[/green] Full details for a specific farm\n"
+                "  → farm tvd=123456\n\n"
+                "[dim]Returns:[/dim]\n"
+                "  • Classification indicators\n"
+                "  • Animal counts (total, dairy, calves, etc.)\n"
+                "  • Calf movements (arrivals, leavings)\n"
+                "  • Proportions and derived metrics\n"
+                "  • Group assignment",
+                title="🏢 Farm Details",
+                border_style="blue",
+            )
+        )
 
         # 4. Statistical Analysis
-        console.print(Panel(
-            "[bold yellow]4. Statistical Analysis[/bold yellow]\n\n"
-            "[cyan]stats[/cyan] - Calculate comprehensive statistics\n\n"
-            "[green]Example 1:[/green] All groups statistics\n"
-            "  → stats\n\n"
-            "[green]Example 2:[/green] Dairy farms only\n"
-            "  → stats group=Milchvieh\n\n"
-            "[green]Example 3:[/green] Muku farms statistics\n"
-            "  → stats group=Muku\n\n"
-            "[dim]Returns:[/dim] min, max, mean, median for all numeric fields",
-            title="📊 Statistics",
-            border_style="magenta"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]4. Statistical Analysis[/bold yellow]\n\n"
+                "[cyan]stats[/cyan] - Calculate comprehensive statistics\n\n"
+                "[green]Example 1:[/green] All groups statistics\n"
+                "  → stats\n\n"
+                "[green]Example 2:[/green] Dairy farms only\n"
+                "  → stats group=Milchvieh\n\n"
+                "[green]Example 3:[/green] Muku farms statistics\n"
+                "  → stats group=Muku\n\n"
+                "[dim]Returns:[/dim] min, max, mean, median for all numeric fields",
+                title="📊 Statistics",
+                border_style="magenta",
+            )
+        )
 
         # 5. Group Comparison
-        console.print(Panel(
-            "[bold yellow]5. Compare Farm Groups[/bold yellow]\n\n"
-            "[cyan]compare[/cyan] - Side-by-side group comparison\n\n"
-            "[green]Example 1:[/green] Compare all groups\n"
-            "  → compare\n\n"
-            "[green]Example 2:[/green] Compare specific groups (coming soon)\n"
-            "  → compare groups=Muku,Milchvieh\n\n"
-            "[dim]Shows:[/dim] Total animals, dairy cattle, calf movements, etc.",
-            title="⚖️  Group Comparison",
-            border_style="cyan"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]5. Compare Farm Groups[/bold yellow]\n\n"
+                "[cyan]compare[/cyan] - Side-by-side group comparison\n\n"
+                "[green]Example 1:[/green] Compare all groups\n"
+                "  → compare\n\n"
+                "[green]Example 2:[/green] Compare specific groups (coming soon)\n"
+                "  → compare groups=Muku,Milchvieh\n\n"
+                "[dim]Shows:[/dim] Total animals, dairy cattle, calf movements, etc.",
+                title="⚖️  Group Comparison",
+                border_style="cyan",
+            )
+        )
 
         # 6. Natural Language Questions
-        console.print(Panel(
-            "[bold yellow]6. Ask Natural Language Questions[/bold yellow]\n\n"
-            "[cyan]question <your question>[/cyan]\n\n"
-            "[green]Example 1:[/green] Count farms\n"
-            "  → question How many dairy farms are there?\n\n"
-            "[green]Example 2:[/green] Percentages\n"
-            "  → question What percentage of farms are Muku?\n\n"
-            "[green]Example 3:[/green] Averages\n"
-            "  → question What is the average animal count?\n\n"
-            "[green]Example 4:[/green] Group comparisons\n"
-            "  → question Which group has the highest average animals?\n\n"
-            "[green]Example 5:[/green] Outliers\n"
-            "  → question Are there farms with unusual animal counts?\n\n"
-            "[dim]The system will parse your question and provide relevant answers[/dim]",
-            title="💬 Natural Language Queries",
-            border_style="yellow"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]6. Ask Natural Language Questions[/bold yellow]\n\n"
+                "[cyan]question <your question>[/cyan]\n\n"
+                "[green]Example 1:[/green] Count farms\n"
+                "  → question How many dairy farms are there?\n\n"
+                "[green]Example 2:[/green] Percentages\n"
+                "  → question What percentage of farms are Muku?\n\n"
+                "[green]Example 3:[/green] Averages\n"
+                "  → question What is the average animal count?\n\n"
+                "[green]Example 4:[/green] Group comparisons\n"
+                "  → question Which group has the highest average animals?\n\n"
+                "[green]Example 5:[/green] Outliers\n"
+                "  → question Are there farms with unusual animal counts?\n\n"
+                "[dim]The system will parse your question and provide relevant answers[/dim]",
+                title="💬 Natural Language Queries",
+                border_style="yellow",
+            )
+        )
 
         # 7. Data Insights
-        console.print(Panel(
-            "[bold yellow]7. Generate Data Insights[/bold yellow]\n\n"
-            "[cyan]insights[/cyan] - Automated pattern detection\n\n"
-            "[green]Example 1:[/green] General insights\n"
-            "  → insights\n"
-            "  → insights focus=general\n\n"
-            "[green]Example 2:[/green] Find outliers\n"
-            "  → insights focus=outliers\n\n"
-            "[green]Example 3:[/green] Data distribution\n"
-            "  → insights focus=distribution\n\n"
-            "[green]Example 4:[/green] Group-specific insights\n"
-            "  → insights group=Milchvieh\n\n"
-            "[dim]Focus options:[/dim] general, outliers, trends, distribution",
-            title="💡 Insights",
-            border_style="green"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]7. Generate Data Insights[/bold yellow]\n\n"
+                "[cyan]insights[/cyan] - Automated pattern detection\n\n"
+                "[green]Example 1:[/green] General insights\n"
+                "  → insights\n"
+                "  → insights focus=general\n\n"
+                "[green]Example 2:[/green] Find outliers\n"
+                "  → insights focus=outliers\n\n"
+                "[green]Example 3:[/green] Data distribution\n"
+                "  → insights focus=distribution\n\n"
+                "[green]Example 4:[/green] Group-specific insights\n"
+                "  → insights group=Milchvieh\n\n"
+                "[dim]Focus options:[/dim] general, outliers, trends, distribution",
+                title="💡 Insights",
+                border_style="green",
+            )
+        )
 
         # 8. Custom Metrics
-        console.print(Panel(
-            "[bold yellow]8. Calculate Custom Metrics[/bold yellow]\n\n"
-            "[cyan]metric expression=<pandas_expression>[/cyan]\n\n"
-            "[green]Example 1:[/green] Sum all animals\n"
-            "  → metric expression=n_animals_total.sum()\n\n"
-            "[green]Example 2:[/green] Average animals per farm\n"
-            "  → metric expression=n_animals_total.mean()\n\n"
-            "[green]Example 3:[/green] Count large farms (>100 animals)\n"
-            "  → metric expression=(n_animals_total>100).sum()\n\n"
-            "[green]Example 4:[/green] Farms in range (50-100 animals)\n"
-            "  → metric expression=n_animals_total.between(50,100).sum()\n\n"
-            "[green]Example 5:[/green] Statistical summary\n"
-            "  → metric expression=n_animals_total.describe()\n\n"
-            "[green]Example 6:[/green] Complex conditions\n"
-            "  → metric expression=((n_animals_total>20)&(n_animals_total<=50)).sum()\n\n"
-            "[dim]Use pandas-style expressions with column names[/dim]",
-            title="🧮 Custom Calculations",
-            border_style="magenta"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]8. Calculate Custom Metrics[/bold yellow]\n\n"
+                "[cyan]metric expression=<pandas_expression>[/cyan]\n\n"
+                "[green]Example 1:[/green] Sum all animals\n"
+                "  → metric expression=n_animals_total.sum()\n\n"
+                "[green]Example 2:[/green] Average animals per farm\n"
+                "  → metric expression=n_animals_total.mean()\n\n"
+                "[green]Example 3:[/green] Count large farms (>100 animals)\n"
+                "  → metric expression=(n_animals_total>100).sum()\n\n"
+                "[green]Example 4:[/green] Farms in range (50-100 animals)\n"
+                "  → metric expression=n_animals_total.between(50,100).sum()\n\n"
+                "[green]Example 5:[/green] Statistical summary\n"
+                "  → metric expression=n_animals_total.describe()\n\n"
+                "[green]Example 6:[/green] Complex conditions\n"
+                "  → metric expression=((n_animals_total>20)&(n_animals_total<=50)).sum()\n\n"
+                "[dim]Use pandas-style expressions with column names[/dim]",
+                title="🧮 Custom Calculations",
+                border_style="magenta",
+            )
+        )
 
         # 9. Aggregations
-        console.print(Panel(
-            "[bold yellow]9. Aggregate Data by Fields[/bold yellow]\n\n"
-            "[cyan]aggregate group_by=<fields> aggregate=<operations>[/cyan]\n\n"
-            "[green]Example 1:[/green] Total animals by group (in Python dict format)\n"
-            "  Note: Currently requires dict syntax - will be simplified\n\n"
-            "[green]Example 2:[/green] Average by year and group\n"
-            "  Note: Aggregations work with pandas syntax\n\n"
-            "[dim]Operations:[/dim] sum, mean, median, min, max, count\n"
-            "[dim]Note:[/dim] This feature uses pandas groupby internally",
-            title="📈 Aggregations",
-            border_style="blue"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]9. Aggregate Data by Fields[/bold yellow]\n\n"
+                "[cyan]aggregate group_by=<fields> aggregate=<operations>[/cyan]\n\n"
+                "[green]Example 1:[/green] Total animals by group (in Python dict format)\n"
+                "  Note: Currently requires dict syntax - will be simplified\n\n"
+                "[green]Example 2:[/green] Average by year and group\n"
+                "  Note: Aggregations work with pandas syntax\n\n"
+                "[dim]Operations:[/dim] sum, mean, median, min, max, count\n"
+                "[dim]Note:[/dim] This feature uses pandas groupby internally",
+                title="📈 Aggregations",
+                border_style="blue",
+            )
+        )
 
         # 10. Export
-        console.print(Panel(
-            "[bold yellow]10. Export Results[/bold yellow]\n\n"
-            "[cyan]export <filename>[/cyan]\n\n"
-            "[green]Example 1:[/green] Default export\n"
-            "  → export\n"
-            "  Saves to: output/analysis_summary.xlsx\n\n"
-            "[green]Example 2:[/green] Custom filename\n"
-            "  → export my_analysis.xlsx\n\n"
-            "[dim]Exports include:[/dim]\n"
-            "  • Summary statistics by group\n"
-            "  • Detailed farm-level data\n"
-            "  • Group counts and distributions\n"
-            "  • Multiple sheets for easy navigation",
-            title="💾 Export",
-            border_style="cyan"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]10. Export Results[/bold yellow]\n\n"
+                "[cyan]export <filename>[/cyan]\n\n"
+                "[green]Example 1:[/green] Default export\n"
+                "  → export\n"
+                "  Saves to: output/analysis_summary.xlsx\n\n"
+                "[green]Example 2:[/green] Custom filename\n"
+                "  → export my_analysis.xlsx\n\n"
+                "[dim]Exports include:[/dim]\n"
+                "  • Summary statistics by group\n"
+                "  • Detailed farm-level data\n"
+                "  • Group counts and distributions\n"
+                "  • Multiple sheets for easy navigation",
+                title="💾 Export",
+                border_style="cyan",
+            )
+        )
 
         # Tips & Best Practices
-        console.print(Panel(
-            "[bold yellow]💡 Tips & Best Practices[/bold yellow]\n\n"
-            "[green]1.[/green] Start with [cyan]info[/cyan] to check data status\n"
-            "[green]2.[/green] Use [cyan]stats[/cyan] to understand overall patterns\n"
-            "[green]3.[/green] Try [cyan]question[/cyan] for quick answers in natural language\n"
-            "[green]4.[/green] Use [cyan]query[/cyan] to filter and explore specific farms\n"
-            "[green]5.[/green] Use [cyan]metric[/cyan] for custom pandas calculations\n"
-            "[green]6.[/green] Use [cyan]insights[/cyan] to discover patterns automatically\n"
-            "[green]7.[/green] Export results with [cyan]export[/cyan] for further analysis\n"
-            "[green]8.[/green] Type [cyan]help[/cyan] anytime for command overview\n\n"
-            "[dim]Tab completion available for commands and parameters![/dim]",
-            title="🎯 Tips",
-            border_style="yellow"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]💡 Tips & Best Practices[/bold yellow]\n\n"
+                "[green]1.[/green] Start with [cyan]info[/cyan] to check data status\n"
+                "[green]2.[/green] Use [cyan]stats[/cyan] to understand overall patterns\n"
+                "[green]3.[/green] Try [cyan]question[/cyan] for quick answers in natural language\n"
+                "[green]4.[/green] Use [cyan]query[/cyan] to filter and explore specific farms\n"
+                "[green]5.[/green] Use [cyan]metric[/cyan] for custom pandas calculations\n"
+                "[green]6.[/green] Use [cyan]insights[/cyan] to discover patterns automatically\n"
+                "[green]7.[/green] Export results with [cyan]export[/cyan] for further analysis\n"
+                "[green]8.[/green] Type [cyan]help[/cyan] anytime for command overview\n\n"
+                "[dim]Tab completion available for commands and parameters![/dim]",
+                title="🎯 Tips",
+                border_style="yellow",
+            )
+        )
 
         # Available Farm Groups
-        console.print(Panel(
-            "[bold yellow]📋 Available Farm Groups[/bold yellow]\n\n"
-            "[cyan]Muku[/cyan]          - Mother cow farms\n"
-            "[cyan]Muku_Amme[/cyan]     - Mother cow farms with nurse cows\n"
-            "[cyan]Milchvieh[/cyan]     - Dairy farms\n"
-            "[cyan]BKMmZ[/cyan]         - Combined dairy with breeding\n"
-            "[cyan]BKMoZ[/cyan]         - Combined dairy without breeding\n"
-            "[cyan]IKM[/cyan]           - Intensive calf rearing\n\n"
-            "[dim]Use these group names in query, stats, and insights commands[/dim]",
-            title="🏷️  Farm Classifications",
-            border_style="blue"
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]📋 Available Farm Groups[/bold yellow]\n\n"
+                "[cyan]Muku[/cyan]          - Mother cow farms\n"
+                "[cyan]Muku_Amme[/cyan]     - Mother cow farms with nurse cows\n"
+                "[cyan]Milchvieh[/cyan]     - Dairy farms\n"
+                "[cyan]BKMmZ[/cyan]         - Combined dairy with breeding\n"
+                "[cyan]BKMoZ[/cyan]         - Combined dairy without breeding\n"
+                "[cyan]IKM[/cyan]           - Intensive calf rearing\n\n"
+                "[dim]Use these group names in query, stats, and insights commands[/dim]",
+                title="🏷️  Farm Classifications",
+                border_style="blue",
+            )
+        )
 
-        console.print("\n[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]")
-        console.print("[dim]Type any command to try it out! Use [cyan]help[/cyan] for quick reference.[/dim]\n")
+        console.print(
+            "\n[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]"
+        )
+        console.print(
+            "[dim]Type any command to try it out! Use [cyan]help[/cyan] for quick reference.[/dim]\n"
+        )
 
     def parse_command(self, command: str) -> tuple[str, Dict[str, Any]]:
         """
