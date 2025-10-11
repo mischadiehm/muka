@@ -6,6 +6,7 @@ through natural language interactions.
 """
 
 import logging
+import numpy as np
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -20,6 +21,34 @@ from muka_analysis.io_utils import IOUtils
 from muka_analysis.models import FarmData
 
 logger = logging.getLogger(__name__)
+
+
+def to_json_serializable(obj: Any) -> Any:
+    """
+    Convert numpy/pandas types to JSON-serializable Python types.
+    
+    Args:
+        obj: Object to convert
+        
+    Returns:
+        JSON-serializable version of the object
+    """
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: to_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [to_json_serializable(item) for item in obj]
+    elif hasattr(obj, "item"):  # Other numpy/pandas scalars
+        return obj.item()
+    else:
+        return obj
 
 
 class DataContext:
@@ -634,11 +663,12 @@ async def handle_query_farms(arguments: Dict[str, Any]) -> Dict[str, Any]:
             }
         )
 
-    return {
+    result = {
         "count": len(results),
         "filters_applied": {k: v for k, v in arguments.items() if v is not None and k != "limit"},
         "farms": results,
     }
+    return to_json_serializable(result)
 
 
 async def handle_get_farm_details(arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -659,7 +689,7 @@ async def handle_get_farm_details(arguments: Dict[str, Any]) -> Dict[str, Any]:
     if farm.group:
         group_value = farm.group.value if hasattr(farm.group, "value") else farm.group
 
-    return {
+    result = {
         "tvd": farm.tvd,
         "year": farm.year,
         "group": group_value,
@@ -688,6 +718,7 @@ async def handle_get_farm_details(arguments: Dict[str, Any]) -> Dict[str, Any]:
             "prop_females_slaughterings_younger731": farm.prop_females_slaughterings_younger731,
         },
     }
+    return to_json_serializable(result)
 
 
 async def handle_calculate_statistics(arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -716,7 +747,7 @@ async def handle_calculate_statistics(arguments: Dict[str, Any]) -> Dict[str, An
     stats_df = data_context.analyzer.calculate_group_statistics(group)
 
     return {
-        "statistics": stats_df.to_dict(orient="records"),
+        "statistics": to_json_serializable(stats_df.to_dict(orient="records")),
     }
 
 
@@ -740,7 +771,7 @@ async def handle_compare_groups(arguments: Dict[str, Any]) -> Dict[str, Any]:
         summary = summary[[col for col in cols_to_keep if col in summary.columns]]
 
     return {
-        "comparison": summary.to_dict(orient="records"),
+        "comparison": to_json_serializable(summary.to_dict(orient="records")),
     }
 
 
@@ -770,7 +801,7 @@ async def handle_custom_metric(arguments: Dict[str, Any]) -> Dict[str, Any]:
         try:
             # Evaluate expression on grouped data
             result = df.groupby(group_by).agg(eval(f"lambda x: {expression}"))
-            return {"result": result.to_dict()}
+            return {"result": to_json_serializable(result.to_dict())}
         except Exception as e:
             return {"error": f"Calculation failed: {e}"}
     else:
@@ -796,13 +827,14 @@ async def handle_custom_metric(arguments: Dict[str, Any]) -> Dict[str, Any]:
                 # Expression uses column names directly or pandas methods
                 result = eval(expression, eval_context)
 
-            # Handle different result types
+            # Handle different result types and ensure JSON serializability
             if isinstance(result, pd.Series):
-                return {"result": result.to_dict()}
+                return {"result": to_json_serializable(result.to_dict())}
             elif isinstance(result, pd.DataFrame):
-                return {"result": result.to_dict(orient="records")}
+                return {"result": to_json_serializable(result.to_dict(orient="records"))}
             else:
-                return {"result": result}
+                # Convert numpy/pandas types to native Python types for JSON serialization
+                return {"result": to_json_serializable(result)}
         except Exception as e:
             logger.error(f"Custom metric calculation failed: {expression}", exc_info=True)
             return {"error": f"Calculation failed: {e}"}
@@ -824,7 +856,7 @@ async def handle_aggregate(arguments: Dict[str, Any]) -> Dict[str, Any]:
     try:
         result = df.groupby(group_by).agg(aggregate).reset_index()
         return {
-            "result": result.to_dict(orient="records"),
+            "result": to_json_serializable(result.to_dict(orient="records")),
         }
     except Exception as e:
         return {"error": f"Aggregation failed: {e}"}
