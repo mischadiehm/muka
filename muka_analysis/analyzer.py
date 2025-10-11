@@ -126,6 +126,9 @@ class FarmAnalyzer:
         if unclassified_count > 0:
             counts["Unclassified"] = unclassified_count
 
+        # Convert numpy types to native Python int for proper serialization
+        counts = {k: int(v) for k, v in counts.items()}
+
         logger.info(f"Group counts: {counts}")
         return counts
 

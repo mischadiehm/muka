@@ -291,10 +291,16 @@ class MCPClient:
                 "[green]Example 3:[/green] Medium-sized farms (50-100 animals)\n"
                 "  → query min_animals=50 max_animals=100\n\n"
                 "[green]Example 4:[/green] Specific farm by TVD ID\n"
-                "  → query tvd=123456\n\n"
+                "  → query tvd=123456\n"
+                "  Get details for one specific farm\n\n"
                 "[green]Example 5:[/green] Farms from specific year\n"
-                "  → query year=2024\n\n"
-                "[dim]Available groups: Muku, Muku_Amme, Milchvieh, BKMmZ, BKMoZ, IKM[/dim]",
+                "  → query year=2024\n"
+                "  Filter by data collection year\n\n"
+                "[green]Example 6:[/green] Combine multiple filters\n"
+                "  → query group=Muku min_animals=50 year=2024\n"
+                "  Get Muku farms with 50+ animals from 2024\n\n"
+                "[dim]Available groups:[/dim] Muku, Muku_Amme, Milchvieh, BKMmZ, BKMoZ, IKM\n"
+                "[dim]Returns:[/dim] Up to 100 farms (use limit parameter for more)",
                 title="🔍 Query & Filter",
                 border_style="green",
             )
@@ -306,13 +312,18 @@ class MCPClient:
                 "[bold yellow]3. Get Detailed Farm Information[/bold yellow]\n\n"
                 "[cyan]farm tvd=<TVD_ID>[/cyan]\n\n"
                 "[green]Example:[/green] Full details for a specific farm\n"
-                "  → farm tvd=123456\n\n"
-                "[dim]Returns:[/dim]\n"
-                "  • Classification indicators\n"
-                "  • Animal counts (total, dairy, calves, etc.)\n"
-                "  • Calf movements (arrivals, leavings)\n"
-                "  • Proportions and derived metrics\n"
-                "  • Group assignment",
+                "  → farm tvd=123456\n"
+                "  Get complete information for one farm\n\n"
+                "[green]Tip:[/green] Use query to find TVD IDs first:\n"
+                "  → query group=Muku limit=5\n"
+                "  → farm tvd=<id_from_query>\n\n"
+                "[dim]Returns comprehensive data:[/dim]\n"
+                "  • TVD ID, year, and assigned group\n"
+                "  • 6 binary classification indicators\n"
+                "  • Animal counts (total, dairy, females, calves)\n"
+                "  • Calf movements (arrivals <85d, leavings <51d)\n"
+                "  • Proportions (dairy days, slaughter rates)\n"
+                "  • All fields used for classification",
                 title="🏢 Farm Details",
                 border_style="blue",
             )
@@ -341,10 +352,16 @@ class MCPClient:
                 "[bold yellow]5. Compare Farm Groups[/bold yellow]\n\n"
                 "[cyan]compare[/cyan] - Side-by-side group comparison\n\n"
                 "[green]Example 1:[/green] Compare all groups\n"
-                "  → compare\n\n"
-                "[green]Example 2:[/green] Compare specific groups (coming soon)\n"
-                "  → compare groups=Muku,Milchvieh\n\n"
-                "[dim]Shows:[/dim] Total animals, dairy cattle, calf movements, etc.",
+                "  → compare\n"
+                "  Shows summary statistics for all 6 farm groups\n\n"
+                "[green]Example 2:[/green] Compare specific groups\n"
+                "  → compare groups=Muku,Milchvieh\n"
+                "  → compare groups=BKMmZ,BKMoZ,IKM\n"
+                "  Compare just the groups you're interested in\n\n"
+                "[green]Example 3:[/green] Compare with specific metrics\n"
+                "  → compare metrics=n_animals_total,n_females_age3_dairy\n"
+                "  Focus on particular fields only\n\n"
+                "[dim]Shows:[/dim] Group, count, avg/median animals, dairy cattle, calf movements",
                 title="⚖️  Group Comparison",
                 border_style="cyan",
             )
@@ -418,13 +435,21 @@ class MCPClient:
         console.print(
             Panel(
                 "[bold yellow]9. Aggregate Data by Fields[/bold yellow]\n\n"
-                "[cyan]aggregate group_by=<fields> aggregate=<operations>[/cyan]\n\n"
-                "[green]Example 1:[/green] Total animals by group (in Python dict format)\n"
-                "  Note: Currently requires dict syntax - will be simplified\n\n"
-                "[green]Example 2:[/green] Average by year and group\n"
-                "  Note: Aggregations work with pandas syntax\n\n"
+                "[cyan]aggregate group_by=<fields> aggregate=<dict>[/cyan]\n\n"
+                "[green]Example 1:[/green] Total animals by group\n"
+                "  → aggregate group_by=group aggregate={'n_animals_total':'sum'}\n"
+                "  Sum of all animals per farm group\n\n"
+                "[green]Example 2:[/green] Average animals by year\n"
+                "  → aggregate group_by=year aggregate={'n_animals_total':'mean'}\n"
+                "  Average farm size per year\n\n"
+                "[green]Example 3:[/green] Multiple aggregations\n"
+                "  → aggregate group_by=group aggregate={'n_animals_total':'sum','n_females_age3_dairy':'mean'}\n"
+                "  Combine different operations\n\n"
+                "[green]Example 4:[/green] Group by multiple fields\n"
+                "  → aggregate group_by=group,year aggregate={'n_animals_total':'count'}\n"
+                "  Count farms by group and year\n\n"
                 "[dim]Operations:[/dim] sum, mean, median, min, max, count\n"
-                "[dim]Note:[/dim] This feature uses pandas groupby internally",
+                "[dim]Note:[/dim] Requires Python dict syntax for aggregate parameter",
                 title="📈 Aggregations",
                 border_style="blue",
             )

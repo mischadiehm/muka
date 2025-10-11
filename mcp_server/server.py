@@ -6,10 +6,10 @@ through natural language interactions.
 """
 
 import logging
-import numpy as np
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 from mcp.server import Server
 from mcp.types import TextContent, Tool
@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 def to_json_serializable(obj: Any) -> Any:
     """
     Convert numpy/pandas types to JSON-serializable Python types.
-    
+
     Args:
         obj: Object to convert
-        
+
     Returns:
         JSON-serializable version of the object
     """
@@ -760,12 +760,18 @@ async def handle_compare_groups(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     groups_to_compare = arguments.get("groups")
     if groups_to_compare:
-        summary = summary[summary["classification_pattern"].isin(groups_to_compare)]
+        # Handle both string (comma-separated) and list formats
+        if isinstance(groups_to_compare, str):
+            groups_to_compare = [g.strip() for g in groups_to_compare.split(",")]
+        summary = summary[summary["group"].isin(groups_to_compare)]
 
     metrics = arguments.get("metrics")
     if metrics:
-        # Keep classification_pattern and count, plus requested metrics
-        cols_to_keep = ["classification_pattern", "count"] + [
+        # Handle both string (comma-separated) and list formats
+        if isinstance(metrics, str):
+            metrics = [m.strip() for m in metrics.split(",")]
+        # Keep group and count, plus requested metrics
+        cols_to_keep = ["group", "count"] + [
             col for col in summary.columns if any(m in col for m in metrics)
         ]
         summary = summary[[col for col in cols_to_keep if col in summary.columns]]
@@ -798,6 +804,10 @@ async def handle_custom_metric(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     # Apply grouping if provided
     if group_by:
+        # Handle string format for group_by (comma-separated)
+        if isinstance(group_by, str):
+            group_by = [g.strip() for g in group_by.split(",")]
+
         try:
             # Evaluate expression on grouped data
             result = df.groupby(group_by).agg(eval(f"lambda x: {expression}"))
@@ -850,6 +860,22 @@ async def handle_aggregate(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     if not group_by or not aggregate:
         return {"error": "Both group_by and aggregate are required"}
+
+    # Handle string format for group_by (comma-separated)
+    if isinstance(group_by, str):
+        group_by = [g.strip() for g in group_by.split(",")]
+
+    # Handle string format for aggregate (Python dict literal)
+    if isinstance(aggregate, str):
+        try:
+            # Safely evaluate dict literal
+            import ast
+
+            aggregate = ast.literal_eval(aggregate)
+        except (ValueError, SyntaxError) as e:
+            return {
+                "error": f"Invalid aggregate format. Expected dict like {{'column':'operation'}}, got: {aggregate}"
+            }
 
     df = data_context.analyzer.df
 
