@@ -970,6 +970,170 @@ def compare_modes(
 
 
 @app.command()
+def show_matrices(
+    save_excel: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--save-excel",
+            "-x",
+            help="Save matrices to Excel file",
+        ),
+    ] = None,
+    theme: Annotated[
+        ColorScheme,
+        typer.Option(
+            "--theme",
+            "-t",
+            help="Color scheme: dark, light, or auto",
+        ),
+    ] = ColorScheme.DARK,
+) -> None:
+    """
+    Display indicator matrices for all classification modes.
+
+    Shows the classification patterns (binary indicators) for each farm group
+    across all 5 indicator modes. This displays ONLY the theoretical matrices,
+    not actual farm data.
+
+    The 6 indicator fields:
+    1. Female Dairy Cattle (3+ years)
+    2. Female Cattle (3+ years, non-dairy)
+    3. Calf Arrivals (<85 days)
+    4. Calf Non-Slaughter Leavings (<51 days)
+    5. Female Slaughterings (<731 days)
+    6. Young Slaughterings (51-730 days)
+
+    Legend: 0 = absent, 1 = present, * = flexible (either 0 or 1)
+
+    Example:
+        [bold]muka-analysis show-matrices[/bold]
+        [bold]muka-analysis show-matrices --save-excel matrices.xlsx[/bold]
+    """
+    output = init_output(color_scheme=theme, verbose=False)
+    logger = logging.getLogger(__name__)
+
+    output.section("Indicator Matrices for All Classification Modes")
+    output.print("")
+
+    # Define all modes
+    all_modes = [
+        ("6-indicators", "6-Indicator Mode (All fields, most strict)"),
+        ("6-indicators-flex", "6-Indicator Flexible (Milchvieh field 6 flexible)"),
+        ("4-indicators", "4-Indicator Mode (First 4 fields only, OLD method)"),
+        ("5-indicators", "5-Indicator Mode (Ignore field 5)"),
+        ("5-indicators-flex", "5-Indicator Flexible (Ignore field 5, Milchvieh field 6 flexible)"),
+    ]
+
+    # Field names for display
+    field_names = [
+        "F1:Dairy",
+        "F2:Female",
+        "F3:Arrivals",
+        "F4:Leavings",
+        "F5:FemSlght",
+        "F6:YngSlght",
+    ]
+
+    # Store all mode data for Excel export
+    mode_data = {}
+
+    # Display each mode
+    for mode_name, mode_desc in all_modes:
+        output.header(mode_desc)
+
+        # Create classifier for this mode
+        classifier = FarmClassifier(indicator_mode=mode_name)
+        profiles = classifier.get_all_profiles()
+
+        # Create table
+        table = output.create_table(
+            mode_name,
+            [("Group", "header")] + [(field, "data") for field in field_names],
+        )
+
+        # Collect data for this mode
+        mode_rows = []
+
+        for profile in profiles:
+            row = [profile.group_name.value]
+
+            # Add each indicator field
+            indicators = [
+                profile.female_dairy_cattle,
+                profile.female_cattle,
+                profile.calf_arrivals,
+                profile.calf_non_slaughter_leavings,
+                profile.female_slaughterings,
+                profile.young_slaughterings,
+            ]
+
+            for ind in indicators:
+                if ind is None:
+                    row.append("*")
+                else:
+                    row.append(str(ind))
+
+            table.add_row(*row)
+            mode_rows.append(row)
+
+        output.show_table(table)
+        output.print("")
+
+        # Store for Excel
+        mode_data[mode_name] = {
+            "description": mode_desc,
+            "columns": ["Group"] + field_names,
+            "rows": mode_rows,
+        }
+
+    # Show legend
+    output.header("Legend")
+    output.info("0 = Indicator absent (feature not present)")
+    output.info("1 = Indicator present (feature exists)")
+    output.info("* = Flexible (accepts either 0 or 1)")
+    output.print("")
+
+    # Show field descriptions
+    output.header("Field Descriptions")
+    output.info("F1: Female Dairy Cattle - Female cattle aged 3+ years with dairy purpose")
+    output.info("F2: Female Cattle - Other female cattle aged 3+ years (non-dairy)")
+    output.info("F3: Calf Arrivals - Entries of calves younger than 85 days")
+    output.info("F4: Calf Leavings - Non-slaughter leavings of calves younger than 51 days")
+    output.info("F5: Female Slaughterings - Slaughterings of female cattle younger than 731 days")
+    output.info("F6: Young Slaughterings - Slaughterings of animals aged 51-730 days")
+    output.print("")
+
+    # Export to Excel if requested
+    if save_excel:
+        try:
+            import pandas as pd
+
+            with pd.ExcelWriter(save_excel, engine="openpyxl") as writer:
+                for mode_name, data in mode_data.items():
+                    # Create DataFrame
+                    df = pd.DataFrame(data["rows"], columns=data["columns"])
+
+                    # Add description as first row (using empty first column)
+                    desc_df = pd.DataFrame([[data["description"]] + [""] * len(field_names)], columns=data["columns"])
+
+                    # Combine with empty row separator
+                    empty_df = pd.DataFrame([[""] * len(data["columns"])], columns=data["columns"])
+                    final_df = pd.concat([desc_df, empty_df, df], ignore_index=True)
+
+                    # Write to Excel
+                    sheet_name = mode_name.replace("-", "_")[:31]  # Excel sheet name limit
+                    final_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            output.success(f"Matrices saved to: {save_excel}")
+            output.print("")
+
+        except Exception as e:
+            logger.error(f"Failed to save Excel: {e}", exc_info=True)
+            output.error(f"Failed to save Excel: {e}")
+            raise typer.Exit(1)
+
+
+@app.command()
 def version(
     theme: Annotated[
         ColorScheme,
