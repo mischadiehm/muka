@@ -14,6 +14,8 @@ A Python package for classifying and analyzing farm data based on cattle types a
 - 📋 **Data validation** commands to check file quality
 - 🎯 **Six farm group classifications** based on binary indicators
 - 🔌 **Abstracted Output Interface** - Centralized logging and console management
+- ⭐ **Multi-Mode Analysis** - Compare ALL 5 indicator modes in one command
+- 📈 **Mode-Specific Naming** - Output files include indicator mode for traceability
 
 ## Quick Start
 
@@ -33,6 +35,15 @@ uv run python -m muka_analysis analyze
 
 # Save detailed analysis to Excel file
 uv run python -m muka_analysis analyze --save-analysis
+
+# Analyze with specific indicator mode
+uv run python -m muka_analysis analyze --mode 4-indicators --save-analysis
+
+# ⭐ NEW: Analyze with ALL indicator modes (comprehensive comparison)
+uv run python -m muka_analysis analyze-all-modes
+
+# ⭐ NEW: All modes analysis with full data sheets
+uv run python -m muka_analysis analyze-all-modes --include-data
 
 # Specify custom files and theme
 uv run python -m muka_analysis analyze \
@@ -68,6 +79,95 @@ The CLI supports three color schemes:
 - `--theme auto`: Auto-detect system theme (future feature)
 
 All commands support theme switching to ensure comfortable viewing in any environment.
+
+## ⭐ Multi-Mode Analysis (NEW!)
+
+Analyze your farm data with **ALL 5 indicator modes** simultaneously and get a comprehensive comparison in a single Excel workbook!
+
+### Quick Start
+
+```bash
+# Run all-modes analysis (summaries only - recommended)
+uv run python -m muka_analysis analyze-all-modes
+
+# Include full farm data for each mode (large file)
+uv run python -m muka_analysis analyze-all-modes --include-data
+
+# Custom output location
+uv run python -m muka_analysis analyze-all-modes --output my_comparison.xlsx
+```
+
+### What You Get
+
+The `analyze-all-modes` command generates a comprehensive Excel workbook with:
+
+1. **Comparison_Summary** sheet - Cross-mode comparison showing:
+   - Total farms analyzed
+   - Classification success rates per mode
+   - Group distribution counts and percentages
+   - Side-by-side metrics across all modes
+
+2. **Per-Mode Analysis** (for each of the 5 indicator modes):
+   - `Data_{mode}` - Classified farm data (optional, with `--include-data`)
+   - `Summary_{mode}` - Statistical summaries by farm group
+   - `Counts_{mode}` - Farm counts per group
+
+### The 5 Indicator Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **6-indicators** | All 6 fields, most strict | Research requiring strict classification |
+| **6-indicators-flex** | All 6 fields, Milchvieh flexible on field 6 | Balanced approach with some flexibility |
+| **4-indicators** | First 4 fields only (OLD method) | Maximum classification rate, most flexible |
+| **5-indicators** | 5 fields, ignore female_slaughterings | Testing impact of field 5 |
+| **5-indicators-flex** | 5 fields, Milchvieh flexible on field 6 | Middle ground between strict and flexible |
+
+### Example Output
+
+```
+🐄 Classification Comparison Across Modes
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
+┃ Mode              ┃ Classified ┃ Unclassified ┃ Success Rate ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━┩
+│ 6-indicators      │ 9,132      │ 25,571       │ 26.3%        │
+│ 6-indicators-flex │ 11,820     │ 22,883       │ 34.1%        │
+│ 4-indicators      │ 25,828     │ 8,875        │ 74.4%        │
+│ 5-indicators      │ 17,256     │ 17,447       │ 49.7%        │
+│ 5-indicators-flex │ 20,794     │ 13,909       │ 59.9%        │
+└───────────────────┴────────────┴──────────────┴──────────────┘
+
+Key Insights:
+📊 Highest classification rate: 4-indicators (74.4%)
+🔒 Most strict classification: 6-indicators (26.3%)
+```
+
+### Mode-Specific Output Naming
+
+When analyzing with a single mode using the `analyze` command, output files now automatically include the mode name:
+
+```bash
+# Single mode analysis
+uv run python -m muka_analysis analyze --mode 4-indicators --save-analysis
+
+# Generates:
+#   output/classified_farms_4-indicators.csv
+#   output/analysis_summary_4-indicators.xlsx
+#     └─ Summary_4-indicators sheet
+#     └─ Detailed_Stats_4-indicators sheet
+#     └─ Group_Counts_4-indicators sheet
+```
+
+This ensures you can easily track which indicator mode was used and compare results across different runs.
+
+### Configuration
+
+Control output naming behavior in `muka_config.toml`:
+
+```toml
+[paths]
+include_mode_in_filename = true   # Include mode name in output files (default: true)
+all_modes_output_file = "all_modes_analysis.xlsx"  # Default output for all-modes
+```
 
 ## 🤖 MCP Server - Natural Language Interface
 

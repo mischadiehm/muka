@@ -6,7 +6,7 @@ generate summary statistics by group.
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -297,6 +297,171 @@ class FarmAnalyzer:
             counts_df.to_excel(writer, sheet_name="Group_Counts", index=False)
 
         logger.info(f"Exported analysis summary to {file_path}")
+
+    def export_with_mode_name(
+        self, file_path: str, mode_name: str, include_detailed_stats: bool = True
+    ) -> None:
+        """
+        Export analysis summary to Excel with mode-specific sheet names.
+
+        Args:
+            file_path: Path to output Excel file
+            mode_name: Indicator mode name for sheet naming
+            include_detailed_stats: Whether to include detailed statistics sheet
+
+        Note:
+            Sheets included:
+            - Summary_{mode}: Overview statistics by farm group
+            - Detailed_Stats_{mode}: Full statistics for all metrics (if enabled)
+            - Group_Counts_{mode}: Counts of farms in each group
+        """
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            # Summary sheet with mode suffix
+            summary = self.get_summary_by_group()
+            sheet_name = f"Summary_{mode_name}"
+            summary.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            # Detailed statistics sheet with mode suffix (if enabled)
+            if include_detailed_stats:
+                detailed_stats = self.calculate_group_statistics()
+                sheet_name = f"Detailed_Stats_{mode_name}"
+                detailed_stats.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            # Group counts with mode suffix
+            counts = self.get_group_counts()
+            counts_df = pd.DataFrame(list(counts.items()), columns=["Group", "Count"])
+            # Sort by group name
+            group_order = [
+                "Muku",
+                "Muku_Amme",
+                "Milchvieh",
+                "BKMmZ",
+                "BKMoZ",
+                "IKM",
+                "Unclassified",
+            ]
+            counts_df["Group"] = pd.Categorical(
+                counts_df["Group"], categories=group_order, ordered=True
+            )
+            counts_df = counts_df.sort_values("Group").reset_index(drop=True)
+            sheet_name = f"Group_Counts_{mode_name}"
+            counts_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+        logger.info(f"Exported mode-specific analysis to {file_path}")
+
+    @staticmethod
+    def create_comparison_summary(mode_results: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
+        """
+        Create a comprehensive comparison summary across multiple indicator modes.
+
+        Args:
+            mode_results: Dictionary mapping mode names to their analysis results.
+                Each result dict should contain: 'total_farms', 'classified_count',
+                'unclassified_count', 'group_counts', 'summary_df'
+
+        Returns:
+            DataFrame with comparison metrics across all modes
+
+        Note:
+            The comparison includes:
+            - Total farms analyzed
+            - Classification success rates
+            - Group distribution counts and percentages
+            - Key statistics per group (if available)
+        """
+        comparison_data = []
+
+        # Mode ordering (for consistent display)
+        mode_order = [
+            "6-indicators",
+            "6-indicators-flex",
+            "4-indicators",
+            "5-indicators",
+            "5-indicators-flex",
+        ]
+
+        # Sort modes according to defined order
+        sorted_modes = sorted(
+            mode_results.keys(), key=lambda x: mode_order.index(x) if x in mode_order else 999
+        )
+
+        # Section 1: Overall classification metrics
+        comparison_data.append(
+            {"Metric": "=== OVERALL CLASSIFICATION ===", **{mode: "" for mode in sorted_modes}}
+        )
+
+        # Total farms (should be same for all modes)
+        total_farms_row = {"Metric": "Total Farms"}
+        for mode in sorted_modes:
+            total_farms_row[mode] = mode_results[mode].get("total_farms", 0)
+        comparison_data.append(total_farms_row)
+
+        # Classified farms count
+        classified_row = {"Metric": "Classified Farms"}
+        for mode in sorted_modes:
+            classified_row[mode] = mode_results[mode].get("classified_count", 0)
+        comparison_data.append(classified_row)
+
+        # Unclassified farms count
+        unclassified_row = {"Metric": "Unclassified Farms"}
+        for mode in sorted_modes:
+            unclassified_row[mode] = mode_results[mode].get("unclassified_count", 0)
+        comparison_data.append(unclassified_row)
+
+        # Classification success rate
+        success_rate_row = {"Metric": "Success Rate (%)"}
+        for mode in sorted_modes:
+            total = mode_results[mode].get("total_farms", 0)
+            classified = mode_results[mode].get("classified_count", 0)
+            rate = (classified / total * 100) if total > 0 else 0
+            success_rate_row[mode] = f"{rate:.1f}%"
+        comparison_data.append(success_rate_row)
+
+        # Empty row for spacing
+        comparison_data.append({"Metric": "", **{mode: "" for mode in sorted_modes}})
+
+        # Section 2: Group distribution
+        comparison_data.append(
+            {"Metric": "=== GROUP DISTRIBUTION ===", **{mode: "" for mode in sorted_modes}}
+        )
+
+        # Get all unique groups across all modes
+        all_groups = set()
+        for mode in sorted_modes:
+            group_counts = mode_results[mode].get("group_counts", {})
+            all_groups.update(group_counts.keys())
+
+        # Define group ordering
+        group_order = ["Muku", "Muku_Amme", "Milchvieh", "BKMmZ", "BKMoZ", "IKM", "Unclassified"]
+        sorted_groups = sorted(
+            all_groups, key=lambda x: group_order.index(x) if x in group_order else 999
+        )
+
+        # Add row for each group
+        for group_name in sorted_groups:
+            if group_name != "Unclassified":  # Handle unclassified separately
+                group_row = {"Metric": f"{group_name} Count"}
+                for mode in sorted_modes:
+                    group_counts = mode_results[mode].get("group_counts", {})
+                    count = group_counts.get(group_name, 0)
+                    group_row[mode] = count
+                comparison_data.append(group_row)
+
+                # Add percentage row
+                pct_row = {"Metric": f"{group_name} (%)"}
+                for mode in sorted_modes:
+                    group_counts = mode_results[mode].get("group_counts", {})
+                    classified = mode_results[mode].get("classified_count", 0)
+                    count = group_counts.get(group_name, 0)
+                    pct = (count / classified * 100) if classified > 0 else 0
+                    pct_row[mode] = f"{pct:.1f}%"
+                comparison_data.append(pct_row)
+
+        # Create DataFrame
+        comparison_df = pd.DataFrame(comparison_data)
+
+        logger.info(f"Created comparison summary for {len(sorted_modes)} modes")
+        return comparison_df
 
     def print_summary(self) -> None:
         """

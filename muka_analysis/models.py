@@ -317,3 +317,100 @@ class ClassificationResult(BaseModel):
         """Pydantic model configuration."""
 
         arbitrary_types_allowed = True
+
+
+class ModeAnalysisResult(BaseModel):
+    """
+    Results from analyzing farms with a specific indicator mode.
+
+    This model stores complete analysis results for one indicator mode,
+    including classification results and summary statistics.
+
+    Attributes:
+        mode: Indicator mode used (e.g., '4-indicators')
+        farms: List of classified farm data
+        total_farms: Total number of farms processed
+        classified_count: Number of successfully classified farms
+        unclassified_count: Number of farms that couldn't be classified
+        group_counts: Dictionary mapping group names to farm counts
+        group_percentages: Dictionary mapping group names to percentages
+        summary_stats: Summary statistics by group
+    """
+
+    mode: str = Field(..., description="Indicator mode name")
+    farms: List[FarmData] = Field(..., description="Classified farm data")
+    total_farms: int = Field(..., ge=0, description="Total farms analyzed")
+    classified_count: int = Field(..., ge=0, description="Successfully classified farms")
+    unclassified_count: int = Field(..., ge=0, description="Unclassified farms")
+    group_counts: Dict[str, int] = Field(default_factory=dict, description="Farm counts per group")
+    group_percentages: Dict[str, float] = Field(
+        default_factory=dict, description="Percentage of classified farms per group"
+    )
+    summary_stats: Optional[Any] = Field(
+        default=None, description="Summary statistics DataFrame (stored as dict)"
+    )
+
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, v: str) -> str:
+        """Validate that mode is one of the known indicator modes."""
+        valid_modes = {
+            "6-indicators",
+            "6-indicators-flex",
+            "4-indicators",
+            "5-indicators",
+            "5-indicators-flex",
+        }
+        if v not in valid_modes:
+            raise ValueError(f"Invalid mode '{v}'. Must be one of: {valid_modes}")
+        return v
+
+    class Config:
+        """Pydantic model configuration."""
+
+        arbitrary_types_allowed = True
+
+
+class ModeComparisonSummary(BaseModel):
+    """
+    Summary comparison of results across multiple indicator modes.
+
+    This model stores comparative analysis showing how different
+    indicator modes affect farm classification.
+
+    Attributes:
+        modes: List of indicator modes compared
+        total_farms: Total number of farms analyzed (same across all modes)
+        mode_results: Dictionary mapping mode names to their results
+        classification_comparison: Comparison of classification success rates
+        group_distribution_comparison: Comparison of group distributions
+        farms_with_different_classifications: List of farm IDs that classify differently
+    """
+
+    modes: List[str] = Field(..., description="List of modes compared")
+    total_farms: int = Field(..., ge=0, description="Total farms analyzed")
+    mode_results: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict, description="Results summary per mode"
+    )
+    classification_success_rates: Dict[str, float] = Field(
+        default_factory=dict, description="Classification success rate per mode (percentage)"
+    )
+    group_distribution_comparison: Dict[str, Dict[str, int]] = Field(
+        default_factory=dict, description="Group counts per mode"
+    )
+    farms_with_different_classifications: Optional[List[Dict[str, Any]]] = Field(
+        default=None, description="Farms that classify differently across modes"
+    )
+
+    @field_validator("modes")
+    @classmethod
+    def validate_modes_list(cls, v: List[str]) -> List[str]:
+        """Ensure at least 2 modes are being compared."""
+        if len(v) < 2:
+            raise ValueError("Must compare at least 2 modes")
+        return v
+
+    class Config:
+        """Pydantic model configuration."""
+
+        arbitrary_types_allowed = True

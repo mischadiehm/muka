@@ -50,6 +50,14 @@ class PathsConfig(BaseModel):
         default="analysis_summary.xlsx",
         description="Default summary Excel filename",
     )
+    all_modes_output_file: str = Field(
+        default="all_modes_analysis.xlsx",
+        description="Default output filename for all-modes analysis",
+    )
+    include_mode_in_filename: bool = Field(
+        default=True,
+        description="Include indicator mode name in output filenames",
+    )
 
     @field_validator("csv_dir", "output_dir", mode="before")
     @classmethod
@@ -72,6 +80,46 @@ class PathsConfig(BaseModel):
     def get_summary_output_path(self) -> Path:
         """Get full path to summary output file."""
         return self.output_dir / self.summary_output_file
+
+    def get_all_modes_output_path(self) -> Path:
+        """Get full path to all-modes analysis output file."""
+        return self.output_dir / self.all_modes_output_file
+
+    def get_classified_output_path_with_mode(self, mode: str) -> Path:
+        """
+        Get full path to classified output file with mode name.
+
+        Args:
+            mode: Indicator mode name (e.g., '4-indicators')
+
+        Returns:
+            Path with mode name included if include_mode_in_filename is True
+        """
+        if self.include_mode_in_filename:
+            # Insert mode before file extension
+            base = Path(self.classified_output_file)
+            stem = base.stem
+            suffix = base.suffix
+            return self.output_dir / f"{stem}_{mode}{suffix}"
+        return self.get_classified_output_path()
+
+    def get_summary_output_path_with_mode(self, mode: str) -> Path:
+        """
+        Get full path to summary output file with mode name.
+
+        Args:
+            mode: Indicator mode name (e.g., '4-indicators')
+
+        Returns:
+            Path with mode name included if include_mode_in_filename is True
+        """
+        if self.include_mode_in_filename:
+            # Insert mode before file extension
+            base = Path(self.summary_output_file)
+            stem = base.stem
+            suffix = base.suffix
+            return self.output_dir / f"{stem}_{mode}{suffix}"
+        return self.get_summary_output_path()
 
 
 class ClassificationConfig(BaseModel):

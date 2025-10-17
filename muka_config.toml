@@ -27,6 +27,8 @@ log_file = "muka_analysis.log"
 default_input_file = "BetriebsFilter_Population_10_10_2025_guy_jr.csv"
 classified_output_file = "classified_farms.csv"
 summary_output_file = "analysis_summary.xlsx"
+all_modes_output_file = "all_modes_analysis.xlsx"
+include_mode_in_filename = true  # Include mode name in output files (e.g., classified_farms_4-indicators.csv)
 
 [classification]
 # Farm classification parameters

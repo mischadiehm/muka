@@ -670,13 +670,17 @@ class MCPClient:
 
         elif cmd == "insights":
             if "insights" in result:
+                # Join list of insights into formatted string
+                insights_text = "\n".join(f"• {insight}" for insight in result["insights"])
                 console.print(
                     Panel(
-                        result["insights"],
-                        title="Data Insights",
+                        insights_text,
+                        title="💡 Data Insights",
                         style="magenta",
                     )
                 )
+                if "focus" in result:
+                    console.print(f"[dim]Focus: {result['focus']}[/dim]")
 
         elif cmd == "info":
             console.print(

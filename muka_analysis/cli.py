@@ -8,7 +8,7 @@ through an abstracted output interface for consistent styling and theming.
 import logging
 from collections import Counter
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Any, Dict, Optional
 
 import typer
 
@@ -365,15 +365,26 @@ def analyze(
         logger.info(f"Classification mode: {config.classification.indicator_mode}")
 
     try:
+        # Determine the actual mode being used (from CLI or config)
+        actual_mode = indicator_mode if indicator_mode else config.classification.indicator_mode
+
         # Set default paths from configuration
         if input_file is None:
             input_file = config.paths.get_default_input_path()
         if output_file is None:
-            output_file = config.paths.get_classified_output_path()
+            # Use mode-specific filename if enabled in config
+            if config.paths.include_mode_in_filename:
+                output_file = config.paths.get_classified_output_path_with_mode(actual_mode)
+            else:
+                output_file = config.paths.get_classified_output_path()
 
         # Only set excel_file if save_analysis is True or excel_file is explicitly provided
         if save_analysis and excel_file is None:
-            excel_file = config.paths.get_summary_output_path()
+            # Use mode-specific filename if enabled in config
+            if config.paths.include_mode_in_filename:
+                excel_file = config.paths.get_summary_output_path_with_mode(actual_mode)
+            else:
+                excel_file = config.paths.get_summary_output_path()
 
         # Check if output files exist and prompt for overwrite
         if not force:
@@ -431,7 +442,13 @@ def analyze(
 
             # Save analysis to Excel only if requested
             if excel_file:
-                analyzer.export_summary_to_excel(str(excel_file))
+                # Use mode-specific export if mode naming is enabled
+                if config.paths.include_mode_in_filename:
+                    analyzer.export_with_mode_name(
+                        str(excel_file), actual_mode, include_detailed_stats=True
+                    )
+                else:
+                    analyzer.export_summary_to_excel(str(excel_file))
                 logger.info(f"Analysis summary saved to {excel_file}")
 
             progress.update(task4, description="✓ Results saved")
@@ -543,6 +560,269 @@ def analyze(
     except Exception as e:
         logger.error(f"Analysis failed: {e}", exc_info=True)
         output.error(f"Analysis failed: {e}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def analyze_all_modes(
+    input_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--input",
+            "-i",
+            help="Path to input CSV file",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = None,
+    output_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--output",
+            "-o",
+            help="Path to output Excel file for all-modes analysis",
+        ),
+    ] = None,
+    include_data: Annotated[
+        bool,
+        typer.Option(
+            "--include-data/--no-data",
+            help="Include full farm data sheets (can be large)",
+        ),
+    ] = True,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose logging",
+        ),
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            "-f",
+            help="Overwrite existing output files without prompting",
+        ),
+    ] = False,
+    theme: Annotated[
+        ColorScheme,
+        typer.Option(
+            "--theme",
+            "-t",
+            help="Color scheme: dark, light, or auto",
+        ),
+    ] = ColorScheme.DARK,
+) -> None:
+    """
+    Run analysis with ALL indicator modes and generate comprehensive comparison.
+
+    This command analyzes farms using all 5 indicator modes and creates a single
+    Excel workbook with:
+    - Comparison_Summary: Cross-mode comparison of results
+    - Data sheets: Classified farm data for each mode (optional)
+    - Summary sheets: Group statistics for each mode
+    - Counts sheets: Group distribution for each mode
+
+    The 5 indicator modes analyzed:
+    - 6-indicators: All 6 fields, most strict
+    - 6-indicators-flex: All 6 fields, Milchvieh flexible on field 6
+    - 4-indicators: First 4 fields only (OLD method)
+    - 5-indicators: 5 fields, ignore female_slaughterings
+    - 5-indicators-flex: 5 fields, Milchvieh flexible on field 6
+
+    Example:
+        [bold]muka-analysis analyze-all-modes[/bold]
+        [bold]muka-analysis analyze-all-modes --output my_comparison.xlsx[/bold]
+        [bold]muka-analysis analyze-all-modes --no-data[/bold]  # Summaries only
+    """
+    # Initialize output interface
+    output = init_output(color_scheme=theme, verbose=verbose)
+    logger = logging.getLogger(__name__)
+
+    from muka_analysis.config import get_config
+
+    config = get_config()
+
+    output.section("MuKa Farm Analysis - All Indicator Modes")
+    output.info("This will run classification with all 5 indicator modes")
+    output.print("")
+
+    # Define all modes to analyze
+    all_modes = [
+        "6-indicators",
+        "6-indicators-flex",
+        "4-indicators",
+        "5-indicators",
+        "5-indicators-flex",
+    ]
+
+    try:
+        # Set default paths from configuration
+        if input_file is None:
+            input_file = config.paths.get_default_input_path()
+        if output_file is None:
+            output_file = config.paths.get_all_modes_output_path()
+
+        # Check if output file exists and prompt for overwrite
+        if not force and output_file.exists():
+            output.show_file_list(
+                "⚠️  The following file already exists:",
+                [output_file],
+            )
+
+            if not output.confirm("\nDo you want to overwrite it?"):
+                output.error("Analysis cancelled.")
+                raise typer.Exit(1)
+
+        # Create output directory
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Validate input file exists
+        if not input_file.exists():
+            output.error(f"Input file not found: {input_file}")
+            raise typer.Exit(1)
+
+        output.info(f"Input: {input_file}")
+        output.info(f"Output: {output_file}")
+        output.print("")
+
+        # Dictionary to store results from each mode
+        mode_results: Dict[str, Dict[str, Any]] = {}
+
+        # Run analysis with each mode
+        with output.simple_progress() as progress:
+            # Load data once (outside the mode loop)
+            task_load = progress.add_task("Loading farm data...", total=None)
+            farms_original = IOUtils.read_and_parse(input_file)
+            total_farms = len(farms_original)
+            progress.update(task_load, description=f"✓ Loaded {total_farms:,} farms")
+
+            # Analyze each mode
+            for mode_idx, mode in enumerate(all_modes, 1):
+                task_mode = progress.add_task(f"[{mode_idx}/5] Analyzing {mode}...", total=None)
+
+                # Create a fresh copy of farms for this mode
+                import copy
+
+                farms = copy.deepcopy(farms_original)
+
+                # Classify with this mode
+                classifier = FarmClassifier(indicator_mode=mode)
+                farms = classifier.classify_farms(farms)
+
+                # Analyze results
+                analyzer = FarmAnalyzer(farms)
+                summary_df = analyzer.get_summary_by_group()
+                group_counts = analyzer.get_group_counts()
+
+                # Calculate metrics
+                classified_count = sum(1 for f in farms if f.group is not None)
+                unclassified_count = total_farms - classified_count
+
+                # Store results
+                mode_results[mode] = {
+                    "farms": farms if include_data else None,
+                    "total_farms": total_farms,
+                    "classified_count": classified_count,
+                    "unclassified_count": unclassified_count,
+                    "group_counts": group_counts,
+                    "summary_df": summary_df,
+                }
+
+                progress.update(
+                    task_mode,
+                    description=f"✓ [{mode_idx}/5] {mode}: {classified_count}/{total_farms} classified",
+                )
+
+            # Generate comparison summary
+            task_compare = progress.add_task("Creating comparison summary...", total=None)
+            comparison_df = FarmAnalyzer.create_comparison_summary(mode_results)
+            progress.update(task_compare, description="✓ Comparison summary created")
+
+            # Write comprehensive Excel file
+            task_save = progress.add_task("Writing Excel workbook...", total=None)
+            IOUtils.write_all_modes_excel(
+                mode_results=mode_results,
+                file_path=output_file,
+                comparison_summary=comparison_df,
+            )
+            progress.update(task_save, description="✓ Excel workbook saved")
+
+        # Display success and summary
+        output.success("All-modes analysis completed successfully!")
+        output.print("")
+
+        # Show comparison summary
+        output.section("Classification Comparison Across Modes")
+
+        # Create comparison table
+        comparison_table = output.create_table(
+            "Mode Comparison",
+            [
+                ("Mode", "header"),
+                ("Classified", "data"),
+                ("Unclassified", "data"),
+                ("Success Rate", "highlight"),
+            ],
+        )
+
+        for mode in all_modes:
+            result = mode_results[mode]
+            classified = result["classified_count"]
+            unclassified = result["unclassified_count"]
+            total = result["total_farms"]
+            success_rate = (classified / total * 100) if total > 0 else 0
+
+            comparison_table.add_row(
+                mode, f"{classified:,}", f"{unclassified:,}", f"{success_rate:.1f}%"
+            )
+
+        output.show_table(comparison_table)
+        output.print("")
+
+        # Show key insights
+        output.header("Key Insights")
+
+        # Find mode with highest classification rate
+        best_mode = max(all_modes, key=lambda m: mode_results[m]["classified_count"])
+        best_rate = (
+            mode_results[best_mode]["classified_count"]
+            / mode_results[best_mode]["total_farms"]
+            * 100
+        )
+        output.data(f"📊 Highest classification rate: {best_mode} ({best_rate:.1f}%)")
+
+        # Find mode with most strict classification
+        strictest_mode = min(all_modes, key=lambda m: mode_results[m]["classified_count"])
+        strictest_rate = (
+            mode_results[strictest_mode]["classified_count"]
+            / mode_results[strictest_mode]["total_farms"]
+            * 100
+        )
+        output.data(f"🔒 Most strict classification: {strictest_mode} ({strictest_rate:.1f}%)")
+
+        # Show output file location
+        output.print("")
+        output.section("Output File")
+        output.data(f"📁 Comprehensive analysis: {output_file}")
+        output.print("")
+
+        # Provide helpful tips
+        output.header("💡 Tips")
+        output.info("Open the Excel file to see:")
+        output.info("  • Comparison_Summary sheet for overview")
+        output.info("  • Individual mode sheets for detailed analysis")
+        if not include_data:
+            output.info("  • Use --include-data to add full farm data sheets")
+        output.print("")
+
+    except Exception as e:
+        logger.error(f"All-modes analysis failed: {e}", exc_info=True)
+        output.error(f"All-modes analysis failed: {e}")
         raise typer.Exit(1)
 
 

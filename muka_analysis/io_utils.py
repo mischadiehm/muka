@@ -7,7 +7,7 @@ and error handling.
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -184,7 +184,7 @@ class IOUtils:
                     "group": (
                         farm.group.value
                         if farm.group and hasattr(farm.group, "value")
-                        else farm.group
+                        else "Unclassified" if farm.group is None else farm.group
                     ),
                 }
             )
@@ -258,3 +258,130 @@ class IOUtils:
         """
         df = IOUtils.farm_data_to_dataframe(farms)
         IOUtils.write_csv(df, file_path, include_bom=include_bom)
+
+    @staticmethod
+    def write_excel_with_mode(
+        farms: List[FarmData],
+        file_path: Path,
+        mode_name: str,
+        summary_df: Optional[pd.DataFrame] = None,
+        group_counts: Optional[Dict[str, int]] = None,
+    ) -> None:
+        """
+        Write analysis results to Excel with mode-specific sheet names.
+
+        Args:
+            farms: List of classified FarmData objects
+            file_path: Output Excel file path
+            mode_name: Indicator mode name for sheet naming
+            summary_df: Optional summary statistics DataFrame
+            group_counts: Optional group counts dictionary
+
+        Note:
+            Creates sheets named with mode suffix (e.g., 'Data_4-indicators')
+        """
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            # Data sheet
+            farms_df = IOUtils.farm_data_to_dataframe(farms)
+            sheet_name = f"Data_{mode_name}"
+            farms_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            # Summary sheet (if provided)
+            if summary_df is not None:
+                sheet_name = f"Summary_{mode_name}"
+                summary_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            # Group counts sheet (if provided)
+            if group_counts is not None:
+                counts_df = pd.DataFrame(list(group_counts.items()), columns=["Group", "Count"])
+                # Sort by group name
+                group_order = [
+                    "Muku",
+                    "Muku_Amme",
+                    "Milchvieh",
+                    "BKMmZ",
+                    "BKMoZ",
+                    "IKM",
+                    "Unclassified",
+                ]
+                counts_df["Group"] = pd.Categorical(
+                    counts_df["Group"], categories=group_order, ordered=True
+                )
+                counts_df = counts_df.sort_values("Group").reset_index(drop=True)
+                sheet_name = f"Counts_{mode_name}"
+                counts_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+        logger.info(f"Wrote mode-specific Excel to {file_path}")
+
+    @staticmethod
+    def write_all_modes_excel(
+        mode_results: Dict[str, Any],
+        file_path: Path,
+        comparison_summary: Optional[pd.DataFrame] = None,
+    ) -> None:
+        """
+        Write comprehensive Excel workbook with results from all indicator modes.
+
+        Args:
+            mode_results: Dictionary mapping mode names to their analysis results
+                Each result should contain: 'farms', 'summary_df', 'group_counts'
+            file_path: Output Excel file path
+            comparison_summary: Optional DataFrame with cross-mode comparison
+
+        Note:
+            Creates a multi-sheet workbook with:
+            - Comparison_Summary: Cross-mode comparison (if provided)
+            - Data_{mode}: Classified farm data for each mode
+            - Summary_{mode}: Summary statistics for each mode
+            - Counts_{mode}: Group counts for each mode
+        """
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            # Write comparison summary first (if provided)
+            if comparison_summary is not None:
+                comparison_summary.to_excel(writer, sheet_name="Comparison_Summary", index=False)
+                logger.info("Wrote Comparison_Summary sheet")
+
+            # Write sheets for each mode
+            for mode_name, results in mode_results.items():
+                # Data sheet
+                farms = results.get("farms", [])
+                if farms:
+                    farms_df = IOUtils.farm_data_to_dataframe(farms)
+                    sheet_name = f"Data_{mode_name}"
+                    farms_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    logger.info(f"Wrote {sheet_name} sheet")
+
+                # Summary sheet
+                summary_df = results.get("summary_df")
+                if summary_df is not None and not summary_df.empty:
+                    sheet_name = f"Summary_{mode_name}"
+                    summary_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    logger.info(f"Wrote {sheet_name} sheet")
+
+                # Group counts sheet
+                group_counts = results.get("group_counts")
+                if group_counts:
+                    counts_df = pd.DataFrame(list(group_counts.items()), columns=["Group", "Count"])
+                    # Sort by group name
+                    group_order = [
+                        "Muku",
+                        "Muku_Amme",
+                        "Milchvieh",
+                        "BKMmZ",
+                        "BKMoZ",
+                        "IKM",
+                        "Unclassified",
+                    ]
+                    counts_df["Group"] = pd.Categorical(
+                        counts_df["Group"], categories=group_order, ordered=True
+                    )
+                    counts_df = counts_df.sort_values("Group").reset_index(drop=True)
+                    sheet_name = f"Counts_{mode_name}"
+                    counts_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    logger.info(f"Wrote {sheet_name} sheet")
+
+        logger.info(f"Successfully wrote all-modes Excel to {file_path}")
