@@ -88,10 +88,10 @@ class FarmClassifier:
             - BKMoZ:      [1, 0, 0, 0, 0, 1]
             - IKM:        [0, 1, 1, 0, 0, 1]
 
-            6-INDICATORS-FLEX Mode (Milchvieh flexible on field 6 only):
+            6-INDICATORS-FLEX Mode (Milchvieh flexible on fields 5 & 6):
             - Muku:       [0, 0, 0, 0, 0, 1]
             - Muku_Amme:  [0, 0, 1, 0, 0, 1]
-            - Milchvieh:  [1, 0, 0, 1, 0, *]  <- flexible field 6 only
+            - Milchvieh:  [1, 0, 0, 1, *, *]  <- flexible fields 5 & 6
             - BKMmZ:      [1, 0, 1, 0, 0, 1]
             - BKMoZ:      [1, 0, 0, 0, 0, 1]
             - IKM:        [0, 1, 1, 0, 0, 1]
@@ -191,9 +191,9 @@ class FarmClassifier:
                 ),
             ]
         elif indicator_mode == IndicatorMode.SIX_INDICATORS_FLEX:
-            # 6-indicator classification with Milchvieh field 6 flexibility
-            # Field 5 (female_slaughterings) matters for all
-            # Field 6 (young_slaughterings) = None only for Milchvieh
+            # 6-indicator classification with Milchvieh fields 5 & 6 flexibility
+            # Fields 5 & 6 (slaughterings) = None only for Milchvieh
+            # Other groups have strict patterns on all 6 fields
             profiles = [
                 # Muku: Mother cow farms without nurse cows
                 # Pattern: [0, 0, 0, 0, 0, 1]
@@ -218,14 +218,14 @@ class FarmClassifier:
                     young_slaughterings=1,
                 ),
                 # Milchvieh: Dairy farms
-                # Pattern: [1, 0, 0, 1, 0, (0||1)] - strict field 5, flexible field 6
+                # Pattern: [1, 0, 0, 1, *, *] - flexible fields 5 & 6
                 GroupProfile(
                     group_name=FarmGroup.MILCHVIEH,
                     female_dairy_cattle=1,
                     female_cattle=0,
                     calf_arrivals=0,
                     calf_non_slaughter_leavings=1,
-                    female_slaughterings=0,  # Strict: must be 0
+                    female_slaughterings=None,  # Flexible: accepts 0 or 1
                     young_slaughterings=None,  # Flexible: accepts 0 or 1
                 ),
                 # BKMmZ: Combined keeping dairy with breeding
