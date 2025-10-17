@@ -1114,7 +1114,9 @@ def show_matrices(
                     df = pd.DataFrame(data["rows"], columns=data["columns"])
 
                     # Add description as first row (using empty first column)
-                    desc_df = pd.DataFrame([[data["description"]] + [""] * len(field_names)], columns=data["columns"])
+                    desc_df = pd.DataFrame(
+                        [[data["description"]] + [""] * len(field_names)], columns=data["columns"]
+                    )
 
                     # Combine with empty row separator
                     empty_df = pd.DataFrame([[""] * len(data["columns"])], columns=data["columns"])

@@ -110,10 +110,31 @@ if isinstance(aggregate, str):
 Also added comma-separated string handling for `group_by` parameter.
 
 **Why ast.literal_eval?**
-- Safely evaluates Python literals (dict, list, string, number, etc.)
-- Does NOT execute arbitrary code (unlike `eval()`)
-- Perfect for parsing user-provided dict/list strings
-- Standard library solution for this exact use case
+- Safely evaluates Python literals (dict, list, etc.)
+- Does NOT execute arbitrary code (secure)
+- Standard library solution for this use case
+
+## Issue 6: Rich Can't Render Python Lists
+
+**Error:** `NotRenderableError: Unable to render ['Total farms: 34921', ...]; A str, Segment or object with __rich_console__ method is required`
+
+**Root Cause:**
+- Server returns insights as list of strings: `["insight1", "insight2"]`
+- Client passes list directly to Rich Panel
+- Rich can't render Python list objects - needs string or Rich renderables
+
+**Fix:**
+Changed client display code to join list into formatted string:
+```python
+insights_text = "\n".join(f"• {insight}" for insight in result["insights"])
+console.print(Panel(insights_text, title="💡 Data Insights"))
+```
+
+**Lesson:** Rich library requires:
+- Strings
+- Rich objects (Table, Panel, etc.)
+- Objects with `__rich_console__` method
+- NOT raw Python lists/dicts
 
 ## Lessons Learned
 
