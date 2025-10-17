@@ -85,11 +85,14 @@ class ClassificationConfig(BaseModel):
     )
 
     # Classification criteria
-    use_six_indicators: bool = Field(
-        default=True,
+    indicator_mode: str = Field(
+        default="6-indicators",
         description=(
-            "Use all 6 indicators for classification (includes female_slaughterings "
-            "and young_slaughterings). If False, uses only the original 4 indicators."
+            "Indicator mode for classification:\n"
+            "  - '6-indicators': Use all 6 indicators (NEW method, default)\n"
+            "  - '4-indicators': Use only first 4 indicators (OLD method)\n"
+            "  - '5-indicators': Use 5 indicators, ignore female_slaughterings (field 5)\n"
+            "  - '5-indicators-flex': Use 5 indicators, Milchvieh accepts any young_slaughterings"
         ),
     )
 
@@ -297,6 +300,31 @@ class AppConfig(BaseSettings):
         default=False,
         description="Enable debug mode",
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
+    ):
+        """
+        Customize settings sources to include TOML file.
+
+        Priority (highest to lowest):
+        1. Environment variables
+        2. TOML configuration file
+        3. Default values
+        """
+        from pydantic_settings import TomlConfigSettingsSource
+
+        return (
+            env_settings,
+            TomlConfigSettingsSource(settings_cls),
+            init_settings,
+        )
 
     @classmethod
     def load(cls, config_file: Optional[Path] = None) -> "AppConfig":

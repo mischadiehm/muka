@@ -24,13 +24,23 @@ output_dir = "output"
 log_file = "muka_analysis.log"
 
 # Default filenames
-default_input_file = "BetriebsFilter_Population_18_09_2025_guy_jr.csv"
+default_input_file = "BetriebsFilter_Population_10_10_2025_guy_jr.csv"
 classified_output_file = "classified_farms.csv"
 summary_output_file = "analysis_summary.xlsx"
 
 [classification]
 # Farm classification parameters
 presence_threshold = 0.0        # Threshold for binary classification (>0 = present)
+
+# Indicator mode: which fields to use for classification
+# Options:
+#   "6-indicators"        - Use all 6 indicators (most strict, all fields matter for all groups)
+#   "6-indicators-flex"   - Use all 6, Milchvieh flexible on field 6 only (young_slaughterings)
+#   "4-indicators"        - Use only first 4 indicators (OLD method, most flexible)
+#   "5-indicators"        - Use 5 indicators, ignore female_slaughterings (field 5)
+#   "5-indicators-flex"   - Use 5 indicators, Milchvieh accepts any young_slaughterings
+indicator_mode = "6-indicators"
+
 require_all_fields = true       # Require all fields in input data
 allow_missing_values = false    # Allow missing values in non-critical fields
 

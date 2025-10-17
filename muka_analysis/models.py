@@ -14,6 +14,37 @@ from pydantic import BaseModel, Field, field_validator
 logger = logging.getLogger(__name__)
 
 
+class IndicatorMode(str, Enum):
+    """
+    Enumeration of indicator modes for farm classification.
+
+    Defines which indicators are used in the classification algorithm.
+
+    Attributes:
+        SIX_INDICATORS: Use all 6 indicators (NEW method, most strict)
+            - All fields have specific values for ALL groups including Milchvieh
+            - Milchvieh: [1, 0, 0, 1, 0, 0] (strict on all 6 fields)
+        SIX_INDICATORS_FLEX: Use all 6 indicators with Milchvieh field 6 flexibility
+            - Field 5 matters for all groups (strict)
+            - Field 6: Milchvieh accepts any value (0||1), others have specific values
+            - Milchvieh: [1, 0, 0, 1, 0, *] (flexible only on field 6)
+        FOUR_INDICATORS: Use only first 4 indicators (OLD method, most flexible)
+            - Ignores both slaughter fields (fields 5 & 6 = *)
+        FIVE_INDICATORS: Use 5 indicators, ignore female_slaughterings
+            - Field 5 (female_slaughterings) = * for all groups
+            - Field 6 (young_slaughterings) has specific values
+        FIVE_INDICATORS_FLEX: Use 5 indicators with Milchvieh flexibility
+            - Field 5 (female_slaughterings) = * for all groups
+            - Field 6 (young_slaughterings) = * only for Milchvieh, specific for others
+    """
+
+    SIX_INDICATORS = "6-indicators"
+    SIX_INDICATORS_FLEX = "6-indicators-flex"
+    FOUR_INDICATORS = "4-indicators"
+    FIVE_INDICATORS = "5-indicators"
+    FIVE_INDICATORS_FLEX = "5-indicators-flex"
+
+
 class FarmGroup(str, Enum):
     """
     Enumeration of farm group classifications.

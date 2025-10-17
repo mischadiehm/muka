@@ -28,9 +28,9 @@ def main(
     For modern CLI usage, use: uv run python -m muka_analysis.cli
 
     Args:
-        input_file: Path to input CSV file. If None, uses default path.
-        output_file: Path to output CSV file. If None, uses default path.
-        excel_file: Path to output Excel file. If None, uses default path.
+        input_file: Path to input CSV file. If None, uses default path from config.
+        output_file: Path to output CSV file. If None, uses default path from config.
+        excel_file: Path to output Excel file. If None, uses default path from config.
 
     Example:
         >>> from pathlib import Path
@@ -49,13 +49,18 @@ def main(
     logger.info("Running legacy analysis function")
     logger.warning("Consider using the modern CLI: uv run python -m muka_analysis.cli analyze")
 
+    # Get configuration for default paths
+    from muka_analysis.config import get_config
+
+    config = get_config()
+
     # Set default file paths if not provided
     if input_file is None:
-        input_file = Path("csv/BetriebsFilter_Population_18_09_2025_guy_jr.csv")
+        input_file = config.paths.get_default_input_path()
     if output_file is None:
-        output_file = Path("output/classified_farms.csv")
+        output_file = config.paths.get_classified_output_path()
     if excel_file is None:
-        excel_file = Path("output/analysis_summary.xlsx")
+        excel_file = config.paths.get_summary_output_path()
 
     try:
         logger.info(f"Input file: {input_file}")

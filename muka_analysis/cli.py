@@ -288,14 +288,23 @@ def analyze(
             help="Show detailed analysis of unclassified farms with explanations",
         ),
     ] = False,
+    indicator_mode: Annotated[
+        Optional[str],
+        typer.Option(
+            "--mode",
+            "-m",
+            help=(
+                "Indicator mode: 6-indicators (default), 6-indicators-flex, "
+                "4-indicators, 5-indicators, or 5-indicators-flex"
+            ),
+        ),
+    ] = None,
     use_four_indicators: Annotated[
         bool,
         typer.Option(
             "--use-4-indicators",
-            help=(
-                "Use only 4 indicators for classification (OLD method, ignores slaughter fields). "
-                "Default is to use all 6 indicators (NEW method)."
-            ),
+            help="[Deprecated] Use --mode 4-indicators instead",
+            hidden=True,
         ),
     ] = False,
     theme: Annotated[
@@ -333,24 +342,38 @@ def analyze(
 
     output.section("MuKa Farm Classification & Analysis")
 
+    # Determine indicator mode (handle backward compatibility)
+    if use_four_indicators and indicator_mode is None:
+        # Backward compatibility: --use-4-indicators maps to 4-indicators mode
+        indicator_mode = "4-indicators"
+        output.warning("Note: --use-4-indicators is deprecated. Use --mode 4-indicators instead.")
+
     # Show classification mode
-    if use_four_indicators:
-        output.info("Using 4-indicator classification (OLD method - ignoring slaughter fields)")
-        logger.info("Classification mode: 4 indicators (OLD)")
+    if indicator_mode:
+        mode_descriptions = {
+            "6-indicators": "6-indicator (all fields, most strict)",
+            "6-indicators-flex": "6-indicator flexible (Milchvieh accepts any young_slaughterings)",
+            "4-indicators": "4-indicator (first 4 fields only, most flexible)",
+            "5-indicators": "5-indicator (ignore female_slaughterings)",
+            "5-indicators-flex": "5-indicator flexible (Milchvieh accepts any young_slaughterings)",
+        }
+        mode_desc = mode_descriptions.get(indicator_mode, indicator_mode)
+        output.info(f"Using {mode_desc} classification mode")
+        logger.info(f"Classification mode: {indicator_mode}")
     else:
-        output.info("Using 6-indicator classification (NEW method - includes slaughter fields)")
-        logger.info("Classification mode: 6 indicators (NEW)")
+        output.info("Using default classification mode from config")
+        logger.info(f"Classification mode: {config.classification.indicator_mode}")
 
     try:
-        # Set default paths
+        # Set default paths from configuration
         if input_file is None:
-            input_file = Path("csv/BetriebsFilter_Population_18_09_2025_guy_jr.csv")
+            input_file = config.paths.get_default_input_path()
         if output_file is None:
-            output_file = Path("output/classified_farms.csv")
+            output_file = config.paths.get_classified_output_path()
 
         # Only set excel_file if save_analysis is True or excel_file is explicitly provided
         if save_analysis and excel_file is None:
-            excel_file = Path("output/analysis_summary.xlsx")
+            excel_file = config.paths.get_summary_output_path()
 
         # Check if output files exist and prompt for overwrite
         if not force:
@@ -391,9 +414,8 @@ def analyze(
 
             # Classify farms
             task2 = progress.add_task("Classifying farms...", total=None)
-            # Use 6 indicators by default, unless --use-4-indicators flag is set
-            use_six = not use_four_indicators
-            classifier = FarmClassifier(use_six_indicators=use_six)
+            # Create classifier with specified mode (or use config default)
+            classifier = FarmClassifier(indicator_mode=indicator_mode)
             farms = classifier.classify_farms(farms)
             progress.update(task2, description="✓ Farms classified")
 
@@ -593,6 +615,77 @@ def validate(
         logger.error(f"Validation failed: {e}", exc_info=True)
         output.error(f"Validation failed: {e}")
         raise typer.Exit(1)
+
+
+@app.command()
+def compare_modes(
+    input_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--input",
+            "-i",
+            help="Path to input CSV file",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+        ),
+    ] = None,
+    save_excel: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--save-excel",
+            "-x",
+            help="Save comparison to Excel file",
+        ),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose logging",
+        ),
+    ] = False,
+    theme: Annotated[
+        ColorScheme,
+        typer.Option(
+            "--theme",
+            "-t",
+            help="Color scheme: dark, light, or auto",
+        ),
+    ] = ColorScheme.DARK,
+) -> None:
+    """
+    Compare all indicator modes side-by-side.
+
+    Runs classification with all 4 indicator modes (6-indicators, 4-indicators,
+    5-indicators, 5-indicators-flex) and shows a comprehensive comparison:
+    - Classification counts per group
+    - Unclassified farms for each mode
+    - Key differences between modes
+    - Optional Excel export for detailed analysis
+
+    Example:
+        [bold]muka-analysis compare-modes[/bold]
+        [bold]muka-analysis compare-modes --save-excel comparison.xlsx[/bold]
+    """
+    # Use the standalone comparison script
+    import subprocess
+    import sys
+
+    cmd = [sys.executable, "compare_indicator_modes.py"]
+
+    if input_file:
+        cmd.extend(["--input", str(input_file)])
+    if save_excel:
+        cmd.extend(["--save-excel", str(save_excel)])
+    if verbose:
+        cmd.append("--verbose")
+    cmd.extend(["--theme", theme.value])
+
+    result = subprocess.run(cmd, check=False)
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
 
 
 @app.command()
