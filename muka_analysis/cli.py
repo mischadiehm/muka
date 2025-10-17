@@ -448,7 +448,8 @@ def analyze(
                         str(excel_file), actual_mode, include_detailed_stats=True
                     )
                 else:
-                    analyzer.export_summary_to_excel(str(excel_file))
+                    # Pass the mode name for sheet naming even if not in filename
+                    analyzer.export_summary_to_excel(str(excel_file), mode_name=actual_mode)
                 logger.info(f"Analysis summary saved to {excel_file}")
 
             progress.update(task4, description="✓ Results saved")
@@ -506,16 +507,16 @@ def analyze(
             summary_df = analyzer.get_summary_by_group()
 
             if not summary_df.empty:
-                # Create table for summary statistics
+                # Create table for summary statistics - simple terminal view
                 stats_table = output.create_table(
                     "Statistics",
                     [
                         ("Farm Group", "header"),
                         ("Count", "data"),
                         ("Avg Animals", "data"),
-                        ("Median Animals", "data"),
-                        ("Avg Females 3+", "data"),
-                        ("Median Females 3+", "data"),
+                        ("Dairy Years", "highlight"),
+                        ("Double Years", "highlight"),
+                        ("Dairy+Double Years", "highlight"),
                     ],
                 )
 
@@ -524,9 +525,9 @@ def analyze(
                         str(row.get("group", "N/A")),
                         f"{int(row.get('count', 0)):,}",
                         f"{row.get('n_animals_total_mean', 0):.1f}",
-                        f"{row.get('n_animals_total_median', 0):.1f}",
-                        f"{row.get('n_females_age3_total_mean', 0):.1f}",
-                        f"{row.get('n_females_age3_total_median', 0):.1f}",
+                        f"{row.get('animalyear_days_female_age3_dairy_mean', 0):.1f}",
+                        f"{row.get('animalyear_days_female_age3_double_mean', 0):.1f}",
+                        f"{row.get('animalyear_days_female_age3_dairydouble_V2_mean', 0):.1f}",
                     )
 
                 output.show_table(stats_table)

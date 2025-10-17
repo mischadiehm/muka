@@ -105,13 +105,28 @@ class IOUtils:
 
         for idx, row in df.iterrows():
             try:
+                # Read n_days columns
+                n_days_dairy = float(row["n_days_female_age3_dairy"])
+                n_days_double = float(row["n_days_female_age3_double"])
+                n_days_dairydouble_v2 = float(row["n_days_female_age3_dairydouble_V2"])
+
+                # Calculate animalyear values (days / 365)
+                animalyear_dairy = n_days_dairy / 365.0
+                animalyear_double = n_days_double / 365.0
+                animalyear_dairydouble_v2 = n_days_dairydouble_v2 / 365.0
+
                 farm = FarmData(
                     tvd=int(row["tvd"]),
                     farm_type_name=str(row["farmTypeName"]),
                     year=int(row["Jahr"]),
                     n_animals_total=int(row["n_animals_total"]),
                     n_females_age3_dairy=int(row["n_females_age3_dairy"]),
-                    n_days_female_age3_dairy=float(row["n_days_female_age3_dairy"]),
+                    n_days_female_age3_dairy=n_days_dairy,
+                    n_days_female_age3_double=n_days_double,
+                    n_days_female_age3_dairydouble_V2=n_days_dairydouble_v2,
+                    animalyear_days_female_age3_dairy=animalyear_dairy,
+                    animalyear_days_female_age3_double=animalyear_double,
+                    animalyear_days_female_age3_dairydouble_V2=animalyear_dairydouble_v2,
                     prop_days_female_age3_dairy=float(row["prop_days_female_age3_dairy"]),
                     n_females_age3_total=int(row["n_females_age3_total"]),
                     n_total_entries_younger85=int(row["n_total_entries_younger85"]),
@@ -168,6 +183,11 @@ class IOUtils:
                     "n_animals_total": farm.n_animals_total,
                     "n_females_age3_dairy": farm.n_females_age3_dairy,
                     "n_days_female_age3_dairy": farm.n_days_female_age3_dairy,
+                    "n_days_female_age3_double": farm.n_days_female_age3_double,
+                    "n_days_female_age3_dairydouble_V2": farm.n_days_female_age3_dairydouble_V2,
+                    "animalyear_days_female_age3_dairy": farm.animalyear_days_female_age3_dairy,
+                    "animalyear_days_female_age3_double": farm.animalyear_days_female_age3_double,
+                    "animalyear_days_female_age3_dairydouble_V2": farm.animalyear_days_female_age3_dairydouble_V2,
                     "prop_days_female_age3_dairy": farm.prop_days_female_age3_dairy,
                     "n_females_age3_total": farm.n_females_age3_total,
                     "n_total_entries_younger85": farm.n_total_entries_younger85,

@@ -714,6 +714,11 @@ async def handle_get_farm_details(arguments: Dict[str, Any]) -> Dict[str, Any]:
         },
         "proportions": {
             "n_days_female_age3_dairy": farm.n_days_female_age3_dairy,
+            "n_days_female_age3_double": farm.n_days_female_age3_double,
+            "n_days_female_age3_dairydouble_V2": farm.n_days_female_age3_dairydouble_V2,
+            "animalyear_days_female_age3_dairy": farm.animalyear_days_female_age3_dairy,
+            "animalyear_days_female_age3_double": farm.animalyear_days_female_age3_double,
+            "animalyear_days_female_age3_dairydouble_V2": farm.animalyear_days_female_age3_dairydouble_V2,
             "prop_days_female_age3_dairy": farm.prop_days_female_age3_dairy,
             "prop_females_slaughterings_younger731": farm.prop_females_slaughterings_younger731,
         },

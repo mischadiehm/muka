@@ -27,6 +27,11 @@ class FarmAnalyzer:
         "n_animals_total",
         "n_females_age3_dairy",
         "n_days_female_age3_dairy",
+        "n_days_female_age3_double",
+        "n_days_female_age3_dairydouble_V2",
+        "animalyear_days_female_age3_dairy",
+        "animalyear_days_female_age3_double",
+        "animalyear_days_female_age3_dairydouble_V2",
         "prop_days_female_age3_dairy",
         "n_females_age3_total",
         "n_total_entries_younger85",
@@ -92,6 +97,11 @@ class FarmAnalyzer:
                     "n_animals_total": farm.n_animals_total,
                     "n_females_age3_dairy": farm.n_females_age3_dairy,
                     "n_days_female_age3_dairy": farm.n_days_female_age3_dairy,
+                    "n_days_female_age3_double": farm.n_days_female_age3_double,
+                    "n_days_female_age3_dairydouble_V2": farm.n_days_female_age3_dairydouble_V2,
+                    "animalyear_days_female_age3_dairy": farm.animalyear_days_female_age3_dairy,
+                    "animalyear_days_female_age3_double": farm.animalyear_days_female_age3_double,
+                    "animalyear_days_female_age3_dairydouble_V2": farm.animalyear_days_female_age3_dairydouble_V2,
                     "prop_days_female_age3_dairy": farm.prop_days_female_age3_dairy,
                     "n_females_age3_total": farm.n_females_age3_total,
                     "n_total_entries_younger85": farm.n_total_entries_younger85,
@@ -218,8 +228,12 @@ class FarmAnalyzer:
             "count",
             "n_animals_total_mean",
             "n_animals_total_median",
-            "n_females_age3_total_mean",
-            "n_females_age3_total_median",
+            "animalyear_days_female_age3_dairy_mean",
+            "animalyear_days_female_age3_dairy_median",
+            "animalyear_days_female_age3_double_mean",
+            "animalyear_days_female_age3_double_median",
+            "animalyear_days_female_age3_dairydouble_V2_mean",
+            "animalyear_days_female_age3_dairydouble_V2_median",
             "n_total_entries_younger85_mean",
             "n_total_leavings_younger51_mean",
         ]
@@ -254,28 +268,33 @@ class FarmAnalyzer:
         """
         return [farm for farm in self.farms if farm.group is None]
 
-    def export_summary_to_excel(self, file_path: str) -> None:
+    def export_summary_to_excel(self, file_path: str, mode_name: Optional[str] = None) -> None:
         """
         Export analysis summary to an Excel file with multiple sheets.
 
         Args:
             file_path: Path to output Excel file
+            mode_name: Optional indicator mode name for sheet naming (e.g., "6-indicators-flex")
 
         Note:
             Sheets included:
-            - Summary: Overview statistics by farm group
-            - Detailed_Stats: Full statistics for all metrics by farm group
-            - Group_Counts: Counts of farms in each group
-            - Validation_Comparison: Comparison between patterns and assigned groups
+            - Summary[_{mode}]: Overview statistics by farm group
+            - Detailed_Stats[_{mode}]: Full statistics for all metrics by farm group
+            - Group_Counts[_{mode}]: Counts of farms in each group
         """
         with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            # Use mode-specific names if provided
+            summary_sheet = f"Summary_{mode_name}" if mode_name else "Summary"
+            detailed_sheet = f"Detailed_Stats_{mode_name}" if mode_name else "Detailed_Stats"
+            counts_sheet = f"Group_Counts_{mode_name}" if mode_name else "Group_Counts"
+
             # Summary sheet - based on assigned groups
             summary = self.get_summary_by_group()
-            summary.to_excel(writer, sheet_name="Summary", index=False)
+            summary.to_excel(writer, sheet_name=summary_sheet, index=False)
 
             # Detailed statistics sheet - based on assigned groups
             detailed_stats = self.calculate_group_statistics()
-            detailed_stats.to_excel(writer, sheet_name="Detailed_Stats", index=False)
+            detailed_stats.to_excel(writer, sheet_name=detailed_sheet, index=False)
 
             # Group counts
             counts = self.get_group_counts()
@@ -294,9 +313,10 @@ class FarmAnalyzer:
                 counts_df["Group"], categories=group_order, ordered=True
             )
             counts_df = counts_df.sort_values("Group").reset_index(drop=True)
-            counts_df.to_excel(writer, sheet_name="Group_Counts", index=False)
+            counts_df.to_excel(writer, sheet_name=counts_sheet, index=False)
 
-        logger.info(f"Exported analysis summary to {file_path}")
+        mode_info = f" with mode {mode_name}" if mode_name else ""
+        logger.info(f"Exported analysis summary to {file_path}{mode_info}")
 
     def export_with_mode_name(
         self, file_path: str, mode_name: str, include_detailed_stats: bool = True

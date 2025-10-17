@@ -205,6 +205,21 @@ class FarmData(BaseModel):
     n_days_female_age3_dairy: float = Field(
         ..., ge=0, description="Total days for female dairy 3+ years"
     )
+    n_days_female_age3_double: float = Field(
+        ..., ge=0, description="Total days for female double-purpose cattle 3+ years"
+    )
+    n_days_female_age3_dairydouble_V2: float = Field(
+        ..., ge=0, description="Total days for female dairy+double cattle 3+ years (V2)"
+    )
+    animalyear_days_female_age3_dairy: float = Field(
+        ..., ge=0, description="Animal-years for female dairy 3+ (n_days / 365)"
+    )
+    animalyear_days_female_age3_double: float = Field(
+        ..., ge=0, description="Animal-years for female double-purpose 3+ (n_days / 365)"
+    )
+    animalyear_days_female_age3_dairydouble_V2: float = Field(
+        ..., ge=0, description="Animal-years for female dairy+double 3+ V2 (n_days / 365)"
+    )
     prop_days_female_age3_dairy: float = Field(
         ..., ge=0, le=1, description="Proportion of days female dairy"
     )
