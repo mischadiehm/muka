@@ -1,8 +1,11 @@
 """
-Statistical analysis for MuKa farm data.
+Classification analysis for MuKa farm data.
 
-This module provides functions to analyze classified farm data and
-generate summary statistics by group.
+This module provides functions to analyze CLASSIFIED farm data and
+generate summary statistics by farm group.
+
+For statistical analysis (distributions, outliers, visualizations),
+use muka_analysis.statistics.StatisticalAnalyzer instead.
 """
 
 import logging
@@ -10,7 +13,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from muka_analysis.models import FarmData, FarmGroup, GroupSummaryStats
+from muka_analysis.models import FarmData, FarmGroup
 
 logger = logging.getLogger(__name__)
 

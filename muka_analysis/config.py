@@ -161,6 +161,139 @@ class ClassificationConfig(BaseModel):
     )
 
 
+class FilteringConfig(BaseModel):
+    """Configuration for data filtering and outlier detection."""
+
+    # Outlier detection settings
+    default_outlier_method: str = Field(
+        default="iqr",
+        description="Default outlier detection method (iqr or zscore)",
+    )
+    iqr_multiplier: float = Field(
+        default=1.5,
+        ge=0.0,
+        description="IQR multiplier for outlier detection (1.5=standard, 3.0=extreme)",
+    )
+    zscore_threshold: float = Field(
+        default=3.0,
+        ge=0.0,
+        description="Z-score threshold for outlier detection (3.0=standard)",
+    )
+
+    # Percentile trimming defaults
+    default_lower_percentile: float = Field(
+        default=0.05,
+        ge=0.0,
+        le=0.5,
+        description="Default lower percentile for trimming (0.05 = 5%)",
+    )
+    default_upper_percentile: float = Field(
+        default=0.95,
+        ge=0.5,
+        le=1.0,
+        description="Default upper percentile for trimming (0.95 = 95%)",
+    )
+
+    # Safety settings
+    min_farms_after_filter: int = Field(
+        default=10,
+        ge=1,
+        description="Minimum number of farms required after filtering",
+    )
+    warn_if_removed_pct: float = Field(
+        default=0.20,
+        ge=0.0,
+        le=1.0,
+        description="Warn if more than this % of farms are removed by filter",
+    )
+
+    # Performance guard rails
+    max_farms_for_distribution_by_group: int = Field(
+        default=50000,
+        ge=1000,
+        description="Max farms for distribution analysis by group (prevent memory issues)",
+    )
+    max_histogram_groups: int = Field(
+        default=10,
+        ge=1,
+        le=20,
+        description="Max number of groups for histogram display",
+    )
+    enable_performance_warnings: bool = Field(
+        default=True,
+        description="Show warnings for potentially slow operations",
+    )
+    max_outlier_columns_batch: int = Field(
+        default=20,
+        ge=1,
+        description="Max columns to process in single outlier analysis",
+    )
+
+    @field_validator("default_outlier_method")
+    @classmethod
+    def validate_outlier_method(cls, v: str) -> str:
+        """Validate outlier method is valid."""
+        valid_methods = ["iqr", "zscore"]
+        if v.lower() not in valid_methods:
+            raise ValueError(f"Outlier method must be one of: {valid_methods}")
+        return v.lower()
+
+
+class VisualizationConfig(BaseModel):
+    """Configuration for console visualizations."""
+
+    # Histogram settings
+    histogram_width: int = Field(
+        default=60,
+        ge=20,
+        le=120,
+        description="Width of console histograms in characters",
+    )
+    histogram_height: int = Field(
+        default=15,
+        ge=5,
+        le=40,
+        description="Height of console histograms in lines",
+    )
+    histogram_bins: int = Field(
+        default=20,
+        ge=5,
+        le=50,
+        description="Number of bins for histograms",
+    )
+
+    # Box plot settings
+    boxplot_width: int = Field(
+        default=60,
+        ge=20,
+        le=120,
+        description="Width of console box plots in characters",
+    )
+    show_outliers_in_plots: bool = Field(
+        default=True,
+        description="Show outliers in console plots",
+    )
+    color_outliers: str = Field(
+        default="red",
+        description="Color for outliers in plots",
+    )
+
+    # Distribution display settings
+    show_percentiles: List[float] = Field(
+        default=[0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95],
+        description="Percentiles to show in distribution summaries",
+    )
+
+    @field_validator("show_percentiles")
+    @classmethod
+    def validate_percentiles(cls, v: List[float]) -> List[float]:
+        """Validate percentile values are between 0 and 1."""
+        for p in v:
+            if not 0 <= p <= 1:
+                raise ValueError(f"Percentile {p} must be between 0 and 1")
+        return sorted(v)
+
+
 class AnalysisConfig(BaseModel):
     """Configuration for statistical analysis parameters."""
 
@@ -330,6 +463,8 @@ class AppConfig(BaseSettings):
     # Configuration sections
     paths: PathsConfig = Field(default_factory=PathsConfig)
     classification: ClassificationConfig = Field(default_factory=ClassificationConfig)
+    filtering: FilteringConfig = Field(default_factory=FilteringConfig)
+    visualization: VisualizationConfig = Field(default_factory=VisualizationConfig)
     analysis: AnalysisConfig = Field(default_factory=AnalysisConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)

@@ -16,6 +16,9 @@ A Python package for classifying and analyzing farm data based on cattle types a
 - 🔌 **Abstracted Output Interface** - Centralized logging and console management
 - ⭐ **Multi-Mode Analysis** - Compare ALL 5 indicator modes in one command
 - 📈 **Mode-Specific Naming** - Output files include indicator mode for traceability
+- 🔬 **Advanced Filtering** - Percentile trimming and outlier detection (NEW!)
+- 📉 **Outlier Analysis** - Statistical detection with IQR and z-score methods (NEW!)
+- 📊 **Distribution Analysis** - Visualize data distributions with console histograms (NEW!)
 
 ## Quick Start
 
@@ -168,6 +171,150 @@ Control output naming behavior in `muka_config.toml`:
 include_mode_in_filename = true   # Include mode name in output files (default: true)
 all_modes_output_file = "all_modes_analysis.xlsx"  # Default output for all-modes
 ```
+
+## 🔬 Advanced Filtering and Outlier Analysis (NEW!)
+
+Perform sophisticated data filtering and outlier detection to focus your analysis on specific subsets of farms.
+
+### What is Percentile Trimming and Why Use It?
+
+**Percentile Explained:**
+A percentile tells you the value below which a given percentage of data falls. For example:
+- **10th percentile**: 10% of farms are below this value
+- **90th percentile**: 90% of farms are below this value (10% are above)
+
+**Why It Matters for Farm Data:**
+Farm data often has extreme values - very small hobby farms and very large industrial operations. These extremes can:
+- Skew your averages and statistics
+- Hide patterns in "typical" farms
+- Make comparisons difficult
+
+**Trimming the top/bottom 10%** means:
+- ✅ Remove the 10% smallest farms (e.g., incomplete data, hobby operations)
+- ✅ Remove the 10% largest farms (e.g., industrial outliers)
+- ✅ Keep the middle 80% - the "typical" farms showing meaningful patterns
+- ✅ Get robust statistics not influenced by extremes
+
+**Example:** With 1,000 farms:
+- Before: Mean skewed by 100 extreme farms (50 tiny + 50 huge)
+- After: Mean from 800 typical farms shows true pattern
+- Result: Better understanding of what's normal
+
+This is especially useful when analyzing metrics like `animalyear_days_female_age3_dairy` where the distribution has long tails.
+
+### Quick Start
+
+```bash
+# Run the interactive demo with three examples
+uv run python demo_filtering_outliers.py
+```
+
+### Example 1: Percentile Trimming
+
+Remove extreme values to focus on "typical" farms:
+
+```python
+from muka_analysis.filters import DataFilter
+from muka_analysis.analyzer import FarmAnalyzer
+
+# Remove top/bottom 10% by animalyear_days_female_age3_dairy
+filter_obj = DataFilter(farms)
+filtered = filter_obj.trim_percentile(
+    column="animalyear_days_female_age3_dairy",
+    lower_percentile=0.10,  # Remove bottom 10%
+    upper_percentile=0.90   # Remove top 10%
+)
+
+# Analyze filtered data
+filtered_farms = filtered.get_filtered_farms()
+analyzer = FarmAnalyzer(filtered_farms)
+stats = analyzer.calculate_group_statistics()
+
+# Show what was filtered
+filtered.print_filter_summary(output)
+```
+
+### Example 2: Outlier Detection
+
+Identify statistical outliers using IQR or z-score methods:
+
+```python
+from muka_analysis.analyzer import FarmAnalyzer
+
+analyzer = FarmAnalyzer(farms)
+
+# Detect outliers in multiple columns
+outlier_report = analyzer.analyze_outliers(
+    columns=[
+        "animalyear_days_female_age3_dairy",
+        "n_animals_total",
+        "prop_days_female_age3_dairy",
+    ],
+    method="iqr",  # or "zscore"
+    threshold=1.5  # IQR multiplier (1.5=standard, 3.0=extreme)
+)
+
+# Display results with statistics
+analyzer.display_outlier_report(outlier_report, output)
+
+# Show distribution summary
+analyzer.display_distribution_summary(
+    "animalyear_days_female_age3_dairy",
+    by_group=True
+)
+
+# Create console histogram
+analyzer.create_console_histogram(
+    "animalyear_days_female_age3_dairy"
+)
+```
+
+### Available Filters
+
+- **Percentile Trimming**: `trim_percentile(column, lower, upper)`
+- **Outlier Removal**: `remove_outliers(column, method, threshold)`
+- **Value Range**: `filter_by_range(column, min_value, max_value)`
+- **Group Filter**: `filter_by_group(FarmGroup.MUKU, ...)`
+- **Custom Filter**: `filter_custom(lambda farm: condition, name)`
+
+### Composable Filters
+
+Chain multiple filters for sophisticated analysis:
+
+```python
+filtered = (
+    DataFilter(farms)
+    .exclude_unclassified()
+    .trim_percentile("animalyear_days_female_age3_dairy", 0.10, 0.90)
+    .remove_outliers("n_animals_total", method="iqr", threshold=1.5)
+    .filter_by_range("year", min_value=2020)
+)
+
+# See all applied filters
+filtered.print_filter_summary(output)
+```
+
+### Configuration
+
+Customize filtering behavior in `muka_config.toml`:
+
+```toml
+[filtering]
+default_outlier_method = "iqr"  # "iqr" or "zscore"
+iqr_multiplier = 1.5            # 1.5=standard, 3.0=extreme
+zscore_threshold = 3.0          # Standard: 3.0 (99.7% of data)
+default_lower_percentile = 0.05 # 5%
+default_upper_percentile = 0.95 # 95%
+min_farms_after_filter = 10
+warn_if_removed_pct = 0.20      # Warn if >20% removed
+
+[visualization]
+histogram_width = 60
+histogram_bins = 20
+show_percentiles = [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
+```
+
+**See the complete guide**: `FILTERING_GUIDE.md`
 
 ## 🤖 MCP Server - Natural Language Interface
 
